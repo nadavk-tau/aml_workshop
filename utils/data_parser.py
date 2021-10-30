@@ -20,11 +20,17 @@ class ResourcesPath(enum.Enum):
 
     def get_dataframe(self, should_replace_na=False, should_log_tranform=False):
         df = pd.read_csv(self.get_path(), sep='\t').copy()
+
+        # NOTE: sklearn input format is:
+        #       feature1 feature2 feature3 ...
+        # item1
+        # item2
+        # item3
+        # Therefore we need to transpose after reading the csv
+
+        df = df.T
         if should_replace_na:
-            # This is a trick to force fillna to be by rows instead of columns - should find something else
-            df = df.T
             df = df.fillna(df.mean())
-            df = df.T
         if should_log_tranform:
             df = np.log(df)
 
