@@ -1,10 +1,21 @@
 import pandas as pd
 import numpy as np
-import pathlib
 import enum
-import seaborn as sns
 
 from config import path_consts
+
+
+class DataTransformation(object):
+    # From project_guidelines.pdf:
+    # We advise you to transform the gene expression data as follows: x -> log2(1+x), and to transform the
+    # IC50 values: x -> log10(x) (but this is not mandatory if this does not improve performance)
+    @staticmethod
+    def log10(x):
+        return np.log10(x)
+    
+    @staticmethod
+    def log2(x):
+        return np.log2(x + 1)
 
 
 class ResourcesPath(enum.Enum):
@@ -18,7 +29,7 @@ class ResourcesPath(enum.Enum):
     def get_path(self):
         return path_consts.DATA_FOLDER_PATH / self.name.lower()
 
-    def get_dataframe(self, should_replace_na=False, should_log_tranform=False):
+    def get_dataframe(self, should_replace_na=False, tranformation=None):
         df = pd.read_csv(self.get_path(), sep='\t').copy()
 
         # NOTE: sklearn input format is:
@@ -31,9 +42,7 @@ class ResourcesPath(enum.Enum):
         df = df.T
         if should_replace_na:
             df = df.fillna(df.mean())
-        if should_log_tranform:
-            df = np.log(df)
+        if tranformation:
+            df = tranformation(df)
 
         return df.copy()
-
-

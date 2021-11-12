@@ -1,5 +1,5 @@
 
-from utils.data_parser import ResourcesPath
+from utils.data_parser import ResourcesPath, DataTransformation
 from utils.pipeline_utils.training_runner import SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner
 
 from sklearn.tree import DecisionTreeRegressor
@@ -8,7 +8,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 
 def main():
     beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True)
-    beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, True)
+    beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
 
     trainign_model = GradientBoostingRegressor()
     spearman_runner = SpearmanCorrelationPipelineRunner(trainign_model, beat_rnaseq, beat_drug)
