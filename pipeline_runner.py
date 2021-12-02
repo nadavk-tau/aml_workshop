@@ -10,7 +10,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 
 
 def main():
-    beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True)
+    beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
     beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
 
     lasso_runner = PCAPipelineRunner(MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug)
