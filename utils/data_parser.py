@@ -25,6 +25,7 @@ class ResourcesPath(enum.Enum):
     DRUG_MUT_COR_LABELS=3
     BEAT_RNASEQ=4
     BEAT_DRUG=5
+    BEAT_FOLDS=6
 
     def get_path(self):
         return path_consts.DATA_FOLDER_PATH / self.name.lower()
