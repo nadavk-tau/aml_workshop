@@ -9,8 +9,7 @@ from sklearn.pipeline import Pipeline
 from scipy.stats import spearmanr
 
 
-class TrainingRunner:
-
+class TrainingRunner(object):
     def __init__(self, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
         self._pipeline = pipeline
         self.X = features_data
@@ -33,24 +32,18 @@ class TrainingRunner:
 
                 current_mse = accuracy_function(y_test, y_pred)
                 error_measures[current_target].append(current_mse)
-
-
         return pd.DataFrame(error_measures)
 
 
 class SpearmanCorrelationPipelineRunner(TrainingRunner):
-
     def __init__(self, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectKBest(spearmanr, k)),
                              ('training_mode', training_model)])
-
         super().__init__(pipeline, features_data, target_data)
 
 
 class ModelFeatureSlectionPipelineRunner(TrainingRunner):
-
     def __init__(self, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
                              ('training_mode', training_model)])
-
         super().__init__(pipeline, features_data, target_data)
