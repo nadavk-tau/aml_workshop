@@ -13,7 +13,8 @@ class TrainingRunner(object):
     RANDOM_STATE = 10
     VERBOSITY = 3
 
-    def __init__(self, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
+    def __init__(self, name: str, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        self._name = name
         self._pipeline = pipeline
         self.X = features_data
         self.y = target_data
@@ -29,23 +30,32 @@ class TrainingRunner(object):
         with parallel_backend('loky'):
             return cross_validate(self._pipeline, self.X, self.y, cv=cv, scoring=scoring, verbose=self.VERBOSITY)
 
+    def __str__(self):
+        return self._name
+
 
 class SpearmanCorrelationPipelineRunner(TrainingRunner):
-    def __init__(self, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectKBest(spearmanr, k)),
                              ('training_model', MultiOutputRegressor(training_model))])
-        super().__init__(pipeline, features_data, target_data)
+        super().__init__(name, pipeline, features_data, target_data)
 
 
 class ModelFeatureSlectionPipelineRunner(TrainingRunner):
-    def __init__(self, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
+    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
                              ('training_model', MultiOutputRegressor(training_model))])
-        super().__init__(pipeline, features_data, target_data)
+        super().__init__(name, pipeline, features_data, target_data)
 
 
 class PCAPipelineRunner(TrainingRunner):
-    def __init__(self, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, n_components: float = 6):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, n_components: float = 6):
         pipeline = Pipeline([('pca', PCA(n_components=n_components)),
-                             ('training_mode;', training_model)])
-        super().__init__(pipeline, features_data, target_data)
+                             ('training_model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
+class RawPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        pipeline = Pipeline([('training_model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
