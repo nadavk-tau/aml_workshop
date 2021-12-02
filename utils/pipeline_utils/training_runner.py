@@ -20,6 +20,13 @@ class TrainingRunner(object):
         self.X = features_data
         self.y = target_data
 
+    def run_grid_search_cv(self, tuned_parameters, number_of_splits, scoring='neg_mean_squared_error'):
+        X_train, _, y_train, _ = train_test_split(self.X, self.y, random_state=self.RANDOM_STATE) 
+        clf = GridSearchCV(self._pipeline, tuned_parameters, cv=number_of_splits, scoring=scoring, verbose=3)
+        with parallel_backend('loky'):
+            res = clf.fit(X_train, y_train)
+        return res
+
     def run_cross_validation(self, number_of_splits: int, number_of_repeats: int, accuracy_function: Callable = mean_squared_error) -> pd.DataFrame:
         rkf = RepeatedKFold(n_splits=number_of_splits, n_repeats=number_of_repeats)
 
