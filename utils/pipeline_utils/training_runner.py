@@ -1,11 +1,10 @@
 import pandas as pd
 
 from joblib import parallel_backend
-from sklearn.linear_model import MultiTaskLasso
 from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import SelectFromModel
+from sklearn.feature_selection import SelectKBest, SelectFromModel
+from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from scipy.stats import spearmanr
 
@@ -26,9 +25,9 @@ class TrainingRunner(object):
             res = clf.fit(X_train, y_train)
         return res
 
-    def run_cross_validation(self, number_of_splits: int, scoring: str) -> pd.DataFrame:
+    def run_cross_validation(self, cv, scoring='neg_mean_squared_error'):
         with parallel_backend('loky'):
-            return cross_validate(self._pipeline, self.X, self.y, cv=number_of_splits, scoring=scoring, verbose=self.VERBOSITY) 
+            return cross_validate(self._pipeline, self.X, self.y, cv=cv, scoring=scoring, verbose=self.VERBOSITY)
 
 
 class SpearmanCorrelationPipelineRunner(TrainingRunner):
@@ -45,7 +44,8 @@ class ModelFeatureSlectionPipelineRunner(TrainingRunner):
         super().__init__(pipeline, features_data, target_data)
 
 
-class LassoPipelineRunner(TrainingRunner):
-    def __init__(self, features_data: pd.DataFrame, target_data: pd.DataFrame, alpha: float = 1.0):
-        pipeline = Pipeline([('training_mode', MultiTaskLasso(random_state=10, max_iter=10000, alpha=alpha))])
+class PCAPipelineRunner(TrainingRunner):
+    def __init__(self, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, n_components: float = 6):
+        pipeline = Pipeline([('pca', PCA(n_components=n_components)),
+                             ('training_mode;', training_model)])
         super().__init__(pipeline, features_data, target_data)
