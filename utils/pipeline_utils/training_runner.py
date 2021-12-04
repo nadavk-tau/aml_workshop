@@ -57,6 +57,6 @@ class PCAPipelineRunner(TrainingRunner):
 
 
 class RawPipelineRunner(TrainingRunner):
-    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame):
-        pipeline = Pipeline([('training_model', training_model)])
+    def __init__(self, name: str, model, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        pipeline = Pipeline([('model', model)])
         super().__init__(name, pipeline, features_data, target_data)
