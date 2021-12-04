@@ -2,7 +2,7 @@
 import numpy as np
 
 from joblib import parallel_backend
-from utils.data_parser import ResourcesPath, DataTransformation
+from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner)
 
@@ -20,9 +20,17 @@ def run_cv(runner):
     print(f"{results['test_score']}, mean={np.mean(results['test_score'])}")
 
 
+def run_subbmission2(runner, cv):
+    print(f">>> Running on \'{runner}\'")
+    results = runner.run_cross_validation(cv=cv, return_estimator=True)
+    print(f"{runner} results:")
+    print(f"{results['test_score']}, mean={np.mean(results['test_score'])}")
+
+
 def main():
     beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
     beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
+    subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
 
     # # [-0.40960095 -0.45455335 -0.44915175 -0.64133478 -0.35218218], mean=-0.46136460243742483
     # huber_pca_runner1 = PCAPipelineRunner('Raw -> HuberRegressor',
@@ -61,6 +69,10 @@ def main():
     # lasso_runner2 = RawPipelineRunner('Raw MultiTaskLasso',
     #     MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug)
     # run_cv(lasso_runner2)
+
+    lasso_runner2 = RawPipelineRunner('Raw MultiTaskLasso',
+        MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug)
+    run_subbmission2(lasso_runner2, subbmission2_folds)
 
     # 0.5: [-0.41743254 -0.42972947 -0.43007486 -0.58145634 -0.34809908], mean=-0.441358456207625
     # 0.7: [-0.39974979 -0.42063227 -0.41655715 -0.58168206 -0.33622506], mean=-0.4309692648978981
