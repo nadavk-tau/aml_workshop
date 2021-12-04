@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import enum
+import os
 
 from config import path_consts
 
@@ -28,22 +29,32 @@ class ResourcesPath(enum.Enum):
     BEAT_FOLDS=6
 
     def get_path(self):
-        return path_consts.DATA_FOLDER_PATH / self.name.lower()
+        return os.path.join(path_consts.DATA_FOLDER_PATH, self.name.lower())
 
     def get_dataframe(self, should_replace_na=False, tranformation=None):
-        df = pd.read_csv(self.get_path(), sep='\t').copy()
-
+        df = pd.read_csv(self.get_path(), sep='\t')
         # NOTE: sklearn input format is:
         #       feature1 feature2 feature3 ...
         # item1
         # item2
         # item3
         # Therefore we need to transpose after reading the csv
-
         df = df.T
         if should_replace_na:
+            # TODO: try different impls here
             df = df.fillna(df.mean())
         if tranformation:
             df = tranformation(df)
+        return df
 
-        return df.copy()
+
+class SubmissionFolds(object):
+    @staticmethod
+    def get_submission2_beat_folds():
+        folds = pd.read_csv(ResourcesPath.BEAT_FOLDS.get_path(), sep='\t', names=['patient', 'fold'])
+        result = []
+        for fold_index, fold_group in folds.groupby('fold'):
+            train = folds[folds.fold != fold_index].index.values
+            test = fold_group.index.values
+            result.append((train, test))
+        return result
