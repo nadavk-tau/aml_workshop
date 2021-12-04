@@ -11,7 +11,7 @@ from scipy.stats import spearmanr
 
 class TrainingRunner(object):
     RANDOM_STATE = 10
-    VERBOSITY = 3
+    VERBOSITY = 0
 
     def __init__(self, name: str, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
         self._name = name
