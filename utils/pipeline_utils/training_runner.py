@@ -15,20 +15,20 @@ class TrainingRunner(object):
 
     def __init__(self, name: str, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
         self._name = name
-        self._pipeline = pipeline
+        self.pipeline = pipeline
         self.X = features_data
         self.y = target_data
 
     def run_grid_search_cv(self, tuned_parameters, number_of_splits, scoring='neg_mean_squared_error'):
-        X_train, _, y_train, _ = train_test_split(self.X, self.y, random_state=self.RANDOM_STATE) 
-        clf = GridSearchCV(self._pipeline, tuned_parameters, cv=number_of_splits, scoring=scoring, verbose=self.VERBOSITY)
+        X_train, _, y_train, _ = train_test_split(self.X, self.y, random_state=self.RANDOM_STATE)
+        clf = GridSearchCV(self.pipeline, tuned_parameters, cv=number_of_splits, scoring=scoring, verbose=self.VERBOSITY)
         with parallel_backend('loky'):
             res = clf.fit(X_train, y_train)
         return res
 
     def run_cross_validation(self, cv, scoring='neg_mean_squared_error'):
         with parallel_backend('loky'):
-            return cross_validate(self._pipeline, self.X, self.y, cv=cv, scoring=scoring, verbose=self.VERBOSITY)
+            return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring, verbose=self.VERBOSITY)
 
     def __str__(self):
         return self._name
