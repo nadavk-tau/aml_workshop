@@ -7,7 +7,7 @@ from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRun
 
 from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
 def run_cv(runner):
@@ -87,9 +87,19 @@ def main():
     # run_cv(linear_regression_runner)
 
     # [-0.42703164 -0.48505265 -0.47001076 -0.64459804 -0.37438933], mean=-0.48021648398811057
-    runner = PCAPipelineRunner('PCA -> GradientBoostingRegressor',
-        MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
-    run_cv(runner)
+    # runner = PCAPipelineRunner('PCA -> GradientBoostingRegressor',
+    #     MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+    # run_cv(runner)
+
+    # [-0.42092993 -0.45726059 -0.45008893 -0.60637066 -0.37943296], mean=-0.46281661457478795
+    # raw_runner = RawPipelineRunner('Raw -> GradientBoostingRegressor',
+    #     MultiOutputRegressor(GradientBoostingRegressor(random_state=42, max_features='log2')), beat_rnaseq, beat_drug)
+    # run_cv(raw_runner)
+
+    # [-0.40763929 -0.45144285 -0.45252828 -0.65356067 -0.35385169], mean=-0.46380455586758407
+    # runner = PCAPipelineRunner('PCA -> RandomForestRegressor',
+    #     MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+    # run_cv(runner)
 
 if __name__ == '__main__':
     main()
