@@ -1,4 +1,5 @@
 
+import pandas as pd
 import numpy as np
 
 from joblib import parallel_backend
@@ -13,6 +14,7 @@ from sklearn.multioutput import MultiOutputRegressor, RegressorChain
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
 
+
 def run_cv(runner):
     print(f">>> Running on \'{runner}\'")
     results = runner.run_cross_validation(cv=5)
@@ -21,10 +23,21 @@ def run_cv(runner):
 
 
 def run_subbmission2(runner, cv):
-    print(f">>> Running on \'{runner}\'")
+    print(f">>> Running on \'{runner}\':")
     results = runner.run_cross_validation(cv=cv, return_estimator=True)
-    print(f"{runner} results:")
-    print(f"{results['test_score']}, mean={np.mean(results['test_score'])}")
+    print(f"- CV results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
+    estimated_results = pd.DataFrame()
+    for i, (_, test_indexes) in enumerate(cv):
+        test_patients = runner.X.iloc[test_indexes]
+        test_results = results['estimator'][i].predict(test_patients)
+        estimated_results = estimated_results.append(pd.DataFrame(test_results, index=test_patients.index))
+    estimated_results.columns = runner.y.columns
+    
+    output_file_name = f'{runner}_results.tsv'
+    output_file_name = output_file_name.replace(' ', '_')
+    print(f"- Writing estimated results to '{output_file_name}'... ", end='')
+    estimated_results.T.to_csv(output_file_name, sep='\t')
+    print('Done.')
 
 
 def main():
@@ -102,15 +115,14 @@ def main():
     # run_cv(linear_regression_runner)
 
     # [-0.4060206  -0.44308826 -0.42111318 -0.59801123 -0.33965524], mean=-0.4415777023661193
-    regressor_chain_runner = PCAPipelineRunner('PCA -> RegressorChain',
-        RegressorChain(Lasso(alpha=0.7), order='random', random_state=42), beat_rnaseq, beat_drug, n_components=40)
-    run_cv(regressor_chain_runner)
+    # regressor_chain_runner = PCAPipelineRunner('PCA -> RegressorChain',
+    #     RegressorChain(Lasso(alpha=0.7), order='random', random_state=42), beat_rnaseq, beat_drug, n_components=40)
+    # run_cv(regressor_chain_runner)
 
     # [-0.41126093 -0.4518314  -0.45571602 -0.65964898 -0.39580831], mean=-0.47485312811184155
-    regressor_chain_runner2 = RawPipelineRunner('Raw RegressorChain',
-        RegressorChain(Lasso(alpha=1.0), order='random', random_state=10), beat_rnaseq, beat_drug)
-    run_cv(regressor_chain_runner2)
-
+    # regressor_chain_runner2 = RawPipelineRunner('Raw RegressorChain',
+    #     RegressorChain(Lasso(alpha=1.0), order='random', random_state=10), beat_rnaseq, beat_drug)
+    # run_cv(regressor_chain_runner2)
 
     # [-0.42703164 -0.48505265 -0.47001076 -0.64459804 -0.37438933], mean=-0.48021648398811057
     # runner = PCAPipelineRunner('PCA -> GradientBoostingRegressor',
