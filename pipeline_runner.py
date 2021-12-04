@@ -1,14 +1,17 @@
 
 import numpy as np
 
+from joblib import parallel_backend
 from utils.data_parser import ResourcesPath, DataTransformation
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner)
 
-from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge
+from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge, Lasso
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.multioutput import MultiOutputRegressor
+from sklearn.multioutput import MultiOutputRegressor, RegressorChain
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.model_selection import train_test_split
 
 def run_cv(runner):
     print(f">>> Running on \'{runner}\'")
@@ -85,6 +88,17 @@ def main():
     # linear_regression_runner = PCAPipelineRunner('PCA -> LinearRegression',
     #     MultiOutputRegressor(LinearRegression()), beat_rnaseq, beat_drug)
     # run_cv(linear_regression_runner)
+
+    # [-0.4060206  -0.44308826 -0.42111318 -0.59801123 -0.33965524], mean=-0.4415777023661193
+    regressor_chain_runner = PCAPipelineRunner('PCA -> RegressorChain',
+        RegressorChain(Lasso(alpha=0.7), order='random', random_state=42), beat_rnaseq, beat_drug, n_components=40)
+    run_cv(regressor_chain_runner)
+
+    # [-0.41126093 -0.4518314  -0.45571602 -0.65964898 -0.39580831], mean=-0.47485312811184155
+    regressor_chain_runner2 = RawPipelineRunner('Raw RegressorChain',
+        RegressorChain(Lasso(alpha=1.0), order='random', random_state=10), beat_rnaseq, beat_drug)
+    run_cv(regressor_chain_runner2)
+
 
     # [-0.42703164 -0.48505265 -0.47001076 -0.64459804 -0.37438933], mean=-0.48021648398811057
     # runner = PCAPipelineRunner('PCA -> GradientBoostingRegressor',
