@@ -1,7 +1,7 @@
 import pandas as pd
 
 from joblib import parallel_backend
-from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
+from sklearn.model_selection import cross_validate, cross_val_predict, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.feature_selection import SelectKBest, SelectFromModel
 from sklearn.decomposition import PCA
@@ -26,9 +26,10 @@ class TrainingRunner(object):
             res = clf.fit(X_train, y_train)
         return res
 
-    def run_cross_validation(self, cv, scoring='neg_mean_squared_error'):
+    def run_cross_validation(self, cv, scoring='neg_mean_squared_error', return_estimator=False):
         with parallel_backend('loky'):
-            return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring, verbose=self.VERBOSITY)
+            return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring, 
+                return_estimator=return_estimator, verbose=self.VERBOSITY)
 
     def __str__(self):
         return self._name
