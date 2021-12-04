@@ -1,3 +1,4 @@
+import re
 
 import pandas as pd
 import numpy as np
@@ -13,6 +14,13 @@ from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor, RegressorChain
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
+
+
+# Based on: https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
+def camel_case_to_snake_case(s):
+  s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', s)
+  s = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
+  return re.sub('(\s+)', '_', s)
 
 
 def run_cv(runner):
@@ -32,9 +40,8 @@ def run_subbmission2(runner, cv):
         test_results = results['estimator'][i].predict(test_patients)
         estimated_results = estimated_results.append(pd.DataFrame(test_results, index=test_patients.index))
     estimated_results.columns = runner.y.columns
-    
-    output_file_name = f'{runner}_results.tsv'
-    output_file_name = output_file_name.replace(' ', '_')
+
+    output_file_name = camel_case_to_snake_case(f'{runner}_results.tsv')
     print(f"- Writing estimated results to '{output_file_name}'... ", end='')
     estimated_results.T.to_csv(output_file_name, sep='\t')
     print('Done.')
