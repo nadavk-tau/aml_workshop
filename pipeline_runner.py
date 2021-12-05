@@ -4,7 +4,7 @@ import numpy as np
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner)
-from utils.results_logger import ResultsDir
+from utils.results_logger import ResultsLogger
 
 from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge, Lasso
 from sklearn.tree import DecisionTreeRegressor
@@ -20,7 +20,7 @@ def run_cv(runner):
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
 
-def run_cv_and_save_estimated_results(runner, cv, results_dir):
+def run_cv_and_save_estimated_results(runner, cv, results_logger):
     print(f">>> Running on \'{runner}\':")
     results = runner.run_cross_validation(cv=cv, return_estimator=True)
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
@@ -32,10 +32,12 @@ def run_cv_and_save_estimated_results(runner, cv, results_dir):
         estimated_results = estimated_results.append(pd.DataFrame(test_results, index=test_patients.index))
     estimated_results.columns = runner.y.columns
 
-    output_file_name = results_dir.get_path_in_dir(f'{runner}_results.tsv')
+    output_file_name = results_logger.get_path_in_dir(f'{runner}_results.tsv')
     print(f"- Writing estimated results to '{output_file_name}'... ", end='')
     estimated_results.T.to_csv(output_file_name, sep='\t')
     print('Done.')
+    results_logger.add_result_to_csv([output_file_name, *results['train_score'], np.mean(results['train_score']),
+        *results['test_score'], np.mean(results['test_score'])])
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
@@ -60,9 +62,9 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
     ]
 
-    with ResultsDir('task1') as results_dir:
+    with ResultsLogger('task1') as results_logger:
         for model in task1_models:
-            run_cv_and_save_estimated_results(model, subbmission2_folds, results_dir)
+            run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
 
 
 def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
@@ -76,12 +78,12 @@ def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
         RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
-        # SemisupervisedPipelineRunner('SemisupervisedPipelineRunner', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, tcga_rnaseq)
+        SemisupervisedPipelineRunner('SemisupervisedPipelineRunner', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, tcga_rnaseq)
     ]
 
-    with ResultsDir('task2') as results_dir:
+    with ResultsLogger('task2') as results_logger:
         for model in task2_models:
-            run_cv_and_save_estimated_results(model, subbmission2_folds, results_dir)
+            run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
 
 
 def main():
