@@ -57,7 +57,8 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         RawPipelineRunner('Raw RegressorChain', RegressorChain(Lasso(alpha=1.0), order='random', random_state=10), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         RawPipelineRunner('Raw GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42, max_features='log2')), beat_rnaseq, beat_drug),
-        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
+        SpearmanCorrelationPipelineRunner('Drug Cluster by Spearman Correlation', [MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8) for i in range(3)], beat_rnaseq, beat_drug, 3)
     ]
 
     with ResultsDir('task1') as results_dir:
@@ -76,7 +77,7 @@ def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
         RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
-        # SemisupervisedPipelineRunner('SemisupervisedPipelineRunner', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, tcga_rnaseq)
+        SemisupervisedPipelineRunner('SemisupervisedPipelineRunner', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, tcga_rnaseq)
     ]
 
     with ResultsDir('task2') as results_dir:
@@ -91,7 +92,7 @@ def main():
     subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
     task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
     task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    
-    
+
+
 if __name__ == '__main__':
     main()

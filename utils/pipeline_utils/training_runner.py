@@ -1,4 +1,6 @@
+import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
 import pandas as pd
+import numpy as np
 
 from joblib import parallel_backend
 from sklearn.model_selection import cross_validate, cross_val_predict, train_test_split, GridSearchCV
@@ -115,3 +117,33 @@ class SemisupervisedPipelineRunner(TrainingRunner):
         pipeline = Pipeline([('model', self.SemisupervisedModelWrapper(model, un_supervised_features_data))])
         super().__init__(name, pipeline, supervised_features_data, target_data)
 
+
+class SpearmanCorrelationPipelineRunner(TrainingRunner):
+    class SpearmanCorrelationModelWrapper(BaseEstimator, RegressorMixin):
+        def __init__(self, models, number_of_cluster = 3):
+            assert len(models) == number_of_cluster, "Number of cluster should be equal to models"
+
+            self.models = models
+            self.number_of_cluster = number_of_cluster
+
+        def fit(self, X, y):
+            clusters = spearman_correlation_matrix_utils.cluster_drugs(X, y, self.number_of_cluster)
+            print(clusters)
+            for i in range(self.number_of_cluster):
+                y_tr = y.iloc[:, np.where(clusters == i)[0]]
+                self.models[i].fit(X, y_tr)
+
+            return self
+
+        def predict(self, X):
+            final_results = []
+            for i in range(self.number_of_cluster):
+                current_cluster_results = self.models[i].predict(X)
+                final_results.append(current_cluster_results)
+
+            return self.model.predict(X)
+
+
+    def __init__(self, name: str, training_models, features_data: pd.DataFrame, target_data: pd.DataFrame, number_of_clusters=3):
+        pipeline = Pipeline([('training_model', self.SpearmanCorrelationModelWrapper(training_models, number_of_clusters))])
+        super().__init__(name, pipeline, features_data, target_data)
