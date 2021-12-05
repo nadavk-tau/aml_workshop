@@ -8,6 +8,10 @@ from datetime import datetime
 
 
 class ResultsLogger(object):
+    COMMON_RESULT_COLUMNS = ['path', 'training1', 'training2', 'training3', 'training4', 'training5', 'training_mean',
+            'test1', 'test2', 'test3', 'test4', 'test5', 'test_mean']
+
+
     # Based on: https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
     @staticmethod
     def _camel_case_to_snake_case(s):
@@ -15,10 +19,11 @@ class ResultsLogger(object):
         s = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
         return re.sub('(\s+)', '_', s)
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, results_columns=None):
         self._prefix = self._camel_case_to_snake_case(prefix)
         self._base_path = os.path.join(path_consts.RESULTS_FOLDER_PATH, self._prefix,
             datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+        self.results_columns = results_columns if results_columns else self.COMMON_RESULT_COLUMNS
 
     def get_path_in_dir(self, file):
         return os.path.join(self._base_path, self._camel_case_to_snake_case(file))
@@ -30,8 +35,7 @@ class ResultsLogger(object):
         os.makedirs(self._base_path)
         self._csv_output_fd = open(self.get_path_in_dir('cv_results.csv'), 'w')
         self._csv = csv.writer(self._csv_output_fd)
-        self._csv.writerow(['path', 'training1', 'training2', 'training3', 'training4', 'training5', 'training_mean',
-            'test1', 'test2', 'test3', 'test4', 'test5', 'test_mean'])
+        self._csv.writerow(self.results_columns)
         return self
 
     def __exit__(self, exc_type, exc_value, tb):

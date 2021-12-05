@@ -1,5 +1,7 @@
 import pandas as pd
 
+from utils import mutation_matrix_utils
+
 from joblib import parallel_backend
 from sklearn.model_selection import cross_validate, cross_val_predict, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
@@ -7,8 +9,7 @@ from sklearn.feature_selection import SelectKBest, SelectFromModel
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
-from scipy.stats import spearmanr
-
+from scipy.stats import spearmanr, mannwhitneyu, f_oneway
 
 class TrainingRunner(object):
     RANDOM_STATE = 10
@@ -115,3 +116,46 @@ class SemisupervisedPipelineRunner(TrainingRunner):
         pipeline = Pipeline([('model', self.SemisupervisedModelWrapper(model, un_supervised_features_data))])
         super().__init__(name, pipeline, supervised_features_data, target_data)
 
+
+class ClassificationTrainingRunner(object):
+    RANDOM_STATE = 10
+    VERBOSITY = 0
+
+    def __init__(self, name: str, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        self._name = name
+        self.pipeline = pipeline
+        self.X = features_data
+        self.y = target_data
+
+    def get_classification_matrix(self, target):
+        predicted_classification_data = {}
+
+        for column in self.y.columns:
+            current_y = self.y[column]
+
+            self.pipeline.fit(self.X, current_y)
+            predicted_classification_data[column] = self.pipeline.predict(target)
+
+        predicted_mutation_matrix = pd.DataFrame.from_dict(predicted_classification_data)
+        predicted_mutation_matrix.index = target.index
+
+        return predicted_mutation_matrix
+
+    def __str__(self):
+        return self._name
+
+
+class MannWhtUCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 10):
+        mannwhtu_corr_function = mutation_matrix_utils.corr_function_generator(mannwhitneyu)
+
+        pipeline = Pipeline([('feature_selection', SelectKBest(mannwhtu_corr_function, k=k),),('model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
+class FOneWayCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 10):
+        f_oneway_corr_function = mutation_matrix_utils.corr_function_generator(f_oneway)
+
+        pipeline = Pipeline([('feature_selection', SelectKBest(f_oneway_corr_function, k=k),),('model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
