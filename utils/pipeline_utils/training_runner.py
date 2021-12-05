@@ -36,6 +36,26 @@ class TrainingRunner(object):
         return self._name
 
 
+class PcaPartial(PCA):
+    def __init__(self, n_components=None, *, copy=True, whiten=False, svd_solver='auto', tol=0, iterated_power='auto', random_state=None, extra_x=None):
+        self.extra_x = extra_x
+        super().__init__(n_components=n_components, copy=copy, whiten=whiten, svd_solver=svd_solver, tol=tol, iterated_power=iterated_power, random_state=random_state)
+
+    def _drop_extra(self, X):
+        return X[:-len(self.extra_x), :]
+
+    def fit(self, X, y=None):
+        res = super().fit(X.append(self.extra_x), y=None) # Drop y
+        return self._drop_extra(res)
+    
+    def fit_transform(self, X, y=None):
+        res = super().fit_transform(X.append(self.extra_x), y=None) # Drop y
+        return self._drop_extra(res)
+
+    def transform(self, X):
+        return super().transform(X)
+
+
 class SpearmanCorrelationPipelineRunner(TrainingRunner):
     def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectKBest(spearmanr, k)),
@@ -47,6 +67,13 @@ class ModelFeatureSlectionPipelineRunner(TrainingRunner):
     def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
                              ('training_model', MultiOutputRegressor(training_model))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
+class PartialPCAPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, n_components: float = 6, extra_x=None):
+        pipeline = Pipeline([('pca', PcaPartial(n_components=n_components, extra_x=extra_x)),
+                             ('training_model', training_model)])
         super().__init__(name, pipeline, features_data, target_data)
 
 
