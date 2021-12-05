@@ -47,7 +47,7 @@ class PcaPartial(PCA):
     def fit(self, X, y=None):
         res = super().fit(X.append(self.extra_x), y=None) # Drop y
         return self._drop_extra(res)
-    
+
     def fit_transform(self, X, y=None):
         res = super().fit_transform(X.append(self.extra_x), y=None) # Drop y
         return self._drop_extra(res)
@@ -93,22 +93,23 @@ class RawPipelineRunner(TrainingRunner):
 class SemisupervisedPipelineRunner(TrainingRunner):
     class SemisupervisedModelWrapper(BaseEstimator, RegressorMixin):
         def __init__(self, model, unsupervised_data: pd.DataFrame):
-            self._unsupervised_data = unsupervised_data
-            self._model = model
+            self.unsupervised_data = unsupervised_data
+            self.model = model
 
         def _add_unsupervised_data(self, X, y):
-            self._model.fit(X, y)
-            y_unsupervised_data = self._model.predict(self._unsupervised_data)
-            return X.append(self._unsupervised_data), y.append(y_unsupervised_data)
+            self.model.fit(X, y)
+            y_unsupervised_data = self.model.predict(self.unsupervised_data)
+
+            return X.append(self.unsupervised_data), y.append(pd.DataFrame(y_unsupervised_data, index=self.unsupervised_data.index, columns=y.columns))
 
         def fit(self, X, y):
             X_with_unsupervised_data, y_with_unsupervised_data = self._add_unsupervised_data(X, y)
-            self._model.fit(X_with_unsupervised_data, y_with_unsupervised_data)
+            self.model.fit(X_with_unsupervised_data, y_with_unsupervised_data)
 
             return self
 
         def predict(self, X):
-            return self._model.predict(X)
+            return self.model.predict(X)
 
     def __init__(self, name: str, model, supervised_features_data: pd.DataFrame, target_data: pd.DataFrame, un_supervised_features_data: pd.DataFrame):
         pipeline = Pipeline([('model', self.SemisupervisedModelWrapper(model, un_supervised_features_data))])
