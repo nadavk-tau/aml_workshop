@@ -6,7 +6,7 @@ import numpy as np
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
-    PCAPipelineRunner, RawPipelineRunner)
+    PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner)
 from config import path_consts
 
 from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge, Lasso
@@ -48,10 +48,8 @@ def run_cv_and_save_estimated_results(runner, cv):
     print('Done.')
 
 
-def main():
-    beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
-    beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
-    models = [
+def task1(beat_rnaseq, beat_drug, subbmission2_folds):
+    task1_models = [
         PCAPipelineRunner('PCAHuberRegressor', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=30),
         PCAPipelineRunner('PCAHuberRegressor2', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=6),
         PCAPipelineRunner('PCAHuberRegressor3', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=50),
@@ -72,9 +70,34 @@ def main():
         PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
     ]
 
-    subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
-    for model in models:
+    for model in task1_models:
         run_cv_and_save_estimated_results(model, subbmission2_folds)
+
+
+def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
+    intersecting_gene_names = beat_rnaseq.columns.intersection(tcga_rnaseq.columns)
+    beat_rnaseq = beat_rnaseq.loc[:, intersecting_gene_names]
+    tcga_rnaseq = tcga_rnaseq.loc[:, intersecting_gene_names]
+    task2_models = [
+        PartialPCAPipelineRunner("PartialPCAPipelineRunner lasso", MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug, extra_x=tcga_rnaseq),
+        PCAPipelineRunner('PCAMultiTaskLasso', MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultiTaskLasso', MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug),
+        PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
+        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+    ]
+
+    for model in task2_models:
+        run_cv_and_save_estimated_results(model, subbmission2_folds)
+
+
+def main():
+    beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
+    tcga_rnaseq = ResourcesPath.TCGA_RNA.get_dataframe(True, DataTransformation.log2)
+    beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
+    subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
+    task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
+    task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
     
     
 if __name__ == '__main__':
