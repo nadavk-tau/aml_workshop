@@ -3,7 +3,9 @@ import numpy as np
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
-    PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner, FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner)
+    PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
+    FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
+    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner)
 from utils.results_logger import ResultsLogger
 from utils.mutation_matrix_utils import calculate_mutation_drug_correlation_matrix
 
@@ -62,6 +64,10 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         RawPipelineRunner('Raw GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42, max_features='log2')), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+        # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
+        # MutualInfoRegressionFeatureSlectionPipelineRunner('MutualInfoRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
+        # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunnerHuber', HuberRegressor(mModelFeatureSlectionPipelineRunnerax_iter=10000, alpha=0.3), beat_rnaseq, beat_drug)
+        # RFEFeatureSlectionPipelineRunner('DecisionTree GradientBoostingRegressor', GradientBoostingRegressor(), DecisionTreeRegressor(), beat_rnaseq, beat_drug)
     ]
 
     with ResultsLogger('task1') as results_logger:

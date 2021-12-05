@@ -3,9 +3,9 @@ import pandas as pd
 from utils import mutation_matrix_utils
 
 from joblib import parallel_backend
-from sklearn.model_selection import cross_validate, cross_val_predict, train_test_split, GridSearchCV
+from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.feature_selection import SelectKBest, SelectFromModel
+from sklearn.feature_selection import SelectKBest, SelectFromModel, f_regression, mutual_info_regression, RFE
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
@@ -68,6 +68,25 @@ class ModelFeatureSlectionPipelineRunner(TrainingRunner):
     def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
                              ('training_model', MultiOutputRegressor(training_model))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+class RFEFeatureSlectionPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, n_features_to_select=0.3):
+        pipeline = Pipeline([('feature_selection_k_best', RFE(estimator=feature_selection_model, n_features_to_select=n_features_to_select)),
+                             ('training_model', MultiOutputRegressor(training_model))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+class FRegressionFeatureSlectionPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
+        pipeline = Pipeline([('training_model', MultiOutputRegressor(Pipeline([('feature_selection_k_best', SelectKBest(f_regression, k)),
+                                                                               ('training_model', training_model)])))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
+class MutualInfoRegressionFeatureSlectionPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
+        pipeline = Pipeline([('training_model', MultiOutputRegressor(Pipeline([('feature_selection_k_best', SelectKBest(mutual_info_regression, k)),
+                                                                               ('training_model', training_model)])))])
         super().__init__(name, pipeline, features_data, target_data)
 
 
