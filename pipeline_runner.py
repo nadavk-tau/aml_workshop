@@ -26,13 +26,15 @@ def run_cv(runner):
     print(f">>> Running on \'{runner}\'")
     results = runner.run_cross_validation(cv=5)
     print(f"{runner} results:")
-    print(f"{results['test_score']}, mean={np.mean(results['test_score'])}")
+    print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
+    print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
 
 def run_cv_and_save_estimated_results(runner, cv):
     print(f">>> Running on \'{runner}\':")
     results = runner.run_cross_validation(cv=cv, return_estimator=True)
-    print(f"- CV results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
+    print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
+    print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
     estimated_results = pd.DataFrame()
     for i, (_, test_indexes) in enumerate(cv):
         test_patients = runner.X.iloc[test_indexes]

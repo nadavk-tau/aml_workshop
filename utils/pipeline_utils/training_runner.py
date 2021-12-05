@@ -29,7 +29,7 @@ class TrainingRunner(object):
     def run_cross_validation(self, cv, scoring='neg_mean_squared_error', return_estimator=False):
         with parallel_backend('loky'):
             return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring, 
-                return_estimator=return_estimator, verbose=self.VERBOSITY)
+                return_estimator=return_estimator, return_train_score=True, verbose=self.VERBOSITY)
 
     def __str__(self):
         return self._name
