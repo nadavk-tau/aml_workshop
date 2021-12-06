@@ -56,9 +56,9 @@ class TrainingRunner(object):
             estimated_results = estimated_results.append(results_pred)
             mse_folds.append(mean_squared_error(results_true, results_pred, multioutput='raw_values'))
             r2_folds.append(r2_score(results_true, results_pred, multioutput='raw_values'))
-        cv_results['estimated_results'] = estimated_results
-        cv_results['mse_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(mse_folds), len(cv), self.y.columns)
-        cv_results['r2_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(r2_folds), len(cv), self.y.columns)
+        cv_results['estimated_results'] = estimated_results.T
+        cv_results['mse_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(mse_folds), len(cv), self.y.columns).T
+        cv_results['r2_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(r2_folds), len(cv), self.y.columns).T
         return cv_results
 
     def __str__(self):
