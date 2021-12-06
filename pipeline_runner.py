@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import seaborn as sns
 
@@ -14,7 +13,7 @@ from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegresso
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, GradientBoostingClassifier
 from sklearn.multioutput import MultiOutputRegressor, RegressorChain
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error
 
 
 def run_cv(runner):
@@ -25,47 +24,32 @@ def run_cv(runner):
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
 
-def run_cv_and_save_estimated_results(runner, cv, results_logger):
+def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=False):
     print(f">>> Running on \'{runner}\':")
-    results = runner.run_cross_validation(cv=cv, return_estimator=True)
+    results = runner.run_cross_validation_and_get_estimated_results(cv=cv, return_estimator=True)
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
-    estimated_results = pd.DataFrame()
-    mse_folds = []
-    r2_folds = []
-    for i, (_, test_indexes) in enumerate(cv):
-        test_patients = runner.X.iloc[test_indexes]
-        results_true = runner.y.iloc[test_indexes]
-        results_pred = pd.DataFrame(results['estimator'][i].predict(test_patients),
-            index=test_patients.index, columns=results_true.columns)
-        estimated_results = estimated_results.append(results_pred)
-        mse_folds.append(mean_squared_error(results_true, results_pred, multioutput='raw_values'))
-        r2_folds.append(r2_score(results_true, results_pred, multioutput='raw_values'))
 
-    output_file_name = results_logger.get_path_in_dir(f'{runner}_results.tsv')
+    output_file_name = results_logger.get_path_in_dir(f'{runner}_estimated_results.tsv')
     print(f"- Writing estimated results to '{output_file_name}'... ", end='')
-    estimated_results.T.to_csv(output_file_name, sep='\t')
+    results['estimated_results'].T.to_csv(output_file_name, sep='\t')
     print('Done.')
     results_logger.add_result_to_csv([output_file_name, *results['train_score'], np.mean(results['train_score']),
         *results['test_score'], np.mean(results['test_score'])])
 
     mse_amtrix_file_name = results_logger.get_path_in_dir(f'{runner}_mse.csv')
     print(f"- Writing mse results to '{mse_amtrix_file_name}'... ", end='')
-    mse_matrix = np.row_stack(mse_folds)
-    mse_dataframe = pd.DataFrame(mse_matrix, index=pd.Index(list(range(len(cv))), name='fold'),
-        columns=runner.y.columns)
-    mse_dataframe.loc['mean'] = mse_dataframe.mean()
-    mse_dataframe.T.to_csv(mse_amtrix_file_name)
+    results['mse_matrix'].T.to_csv(mse_amtrix_file_name)
     print('Done.')
+
     r2_matrix_file_name = results_logger.get_path_in_dir(f'{runner}_r2.csv')
     print(f"- Writing r^2 results to '{r2_matrix_file_name}'... ", end='')
-    r2_matrix = np.row_stack(r2_folds)
-    r2_dataframe = pd.DataFrame(r2_matrix, index=pd.Index(list(range(len(cv))), name='fold'),
-        columns=runner.y.columns)
-    r2_dataframe.loc['mean'] = r2_dataframe.mean()
-    r2_dataframe.T.to_csv(r2_matrix_file_name)
+    results['r2_matrix'].T.to_csv(r2_matrix_file_name)
     print('Done.')
-    return mse_dataframe.T, r2_dataframe.T
+    
+    if output_graphs:
+        sns.displot(results['mse_matrix'].mean(axis=1)).set_xlabels('MSE values').savefig(results_logger.get_path_in_dir(f'{runner}_mse_dist.png'))
+        sns.displot(results['r2_matrix'].mean(axis=1)).set_xlabels('R^2 values').savefig(results_logger.get_path_in_dir(f'{runner}_r2_dist.png'))
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
@@ -96,9 +80,7 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
 
     with ResultsLogger('task1') as results_logger:
         for model in task1_models:
-            mse, r2 = run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
-            sns.displot(mse.mean(axis=1)).set_xlabels('MSE values').savefig(f'results/{model}_mse_dist.png')
-            sns.displot(r2.mean(axis=1)).set_xlabels('r2 values').savefig(f'results/{model}_r2_dist.png')
+            run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger, output_graphs=True)
 
 
 def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
@@ -118,6 +100,7 @@ def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
     with ResultsLogger('task2') as results_logger:
         for model in task2_models:
             run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
+
 
 def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
 
@@ -152,6 +135,7 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
             drug_mutation_corr_matrix = calculate_mutation_drug_correlation_matrix(beat_mutations_predictions, beat_drug)
             _output_results(drug_mutation_corr_matrix, beat_drug, results_logger, str(model))
 
+
 def main():
     beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
     tcga_rnaseq = ResourcesPath.TCGA_RNA.get_dataframe(True, DataTransformation.log2)
@@ -164,12 +148,9 @@ def main():
     task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
     task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
     task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
-    # for drug_name in beat_drug.columns:
-        # sns.displot(beat_drug[drug_name], kind="kde").savefig(f'results/{drug_name}_dist.png')
 
 
 if __name__ == '__main__':
     import warnings
     warnings.filterwarnings("ignore")
-
     main()

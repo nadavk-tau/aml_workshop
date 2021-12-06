@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from utils import mutation_matrix_utils
 
@@ -10,6 +11,8 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from scipy.stats import spearmanr, mannwhitneyu, f_oneway
+from sklearn.metrics import mean_squared_error, r2_score
+
 
 class TrainingRunner(object):
     RANDOM_STATE = 10
@@ -32,6 +35,31 @@ class TrainingRunner(object):
         with parallel_backend('loky'):
             return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring,
                 return_estimator=return_estimator, return_train_score=True, verbose=self.VERBOSITY)
+    
+    @staticmethod
+    def _metric_matrix_to_dataframe(metric_matrix, num_folds, column_names):
+        metric_dataframe = pd.DataFrame(metric_matrix, index=pd.Index(range(num_folds), name='fold'),
+            columns=column_names)
+        metric_dataframe.loc['mean'] = metric_dataframe.mean()
+        return metric_dataframe
+
+    def run_cross_validation_and_get_estimated_results(self, cv, scoring='neg_mean_squared_error'):
+        cv_results = self.run_cross_validation(cv, scoring=scoring, return_estimator=True)
+        estimated_results = pd.DataFrame()
+        mse_folds = []
+        r2_folds = []
+        for i, (_, test_indexes) in enumerate(cv):
+            test_patients = self.X.iloc[test_indexes]
+            results_true = self.y.iloc[test_indexes]
+            results_pred = pd.DataFrame(cv_results['estimator'][i].predict(test_patients),
+                index=test_patients.index, columns=results_true.columns)
+            estimated_results = estimated_results.append(results_pred)
+            mse_folds.append(mean_squared_error(results_true, results_pred, multioutput='raw_values'))
+            r2_folds.append(r2_score(results_true, results_pred, multioutput='raw_values'))
+        cv_results['estimated_results'] = estimated_results
+        cv_results['mse_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(mse_folds), len(cv), self.y.columns)
+        cv_results['r2_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(r2_folds), len(cv), self.y.columns)
+        return cv_results
 
     def __str__(self):
         return self._name
