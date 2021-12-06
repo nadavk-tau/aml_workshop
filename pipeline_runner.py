@@ -62,7 +62,10 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         RawPipelineRunner('Raw RegressorChain', RegressorChain(Lasso(alpha=1.0), order='random', random_state=10), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         RawPipelineRunner('Raw GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42, max_features='log2')), beat_rnaseq, beat_drug),
-        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
+        RawPipelineRunner('Raw MultioutLasso', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=1.0)), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultioutLasso2', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.7)), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultioutLasso3', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.8)), beat_rnaseq, beat_drug)
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # MutualInfoRegressionFeatureSlectionPipelineRunner('MutualInfoRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunnerHuber', HuberRegressor(mModelFeatureSlectionPipelineRunnerax_iter=10000, alpha=0.3), beat_rnaseq, beat_drug)
