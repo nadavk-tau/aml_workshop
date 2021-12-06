@@ -29,18 +29,18 @@ def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
-    full_output_file_name = results_logger.write_csv(f'{runner}_estimated_results.tsv', 'estimated results',
+    full_output_file_name = results_logger.save_csv(f'{runner}_estimated_results.tsv', 'estimated results',
         results['estimated_results'].T, sep='\t')
-    results_logger.add_result_to_csv([full_output_file_name, *results['train_score'], np.mean(results['train_score']),
+    results_logger.add_result_to_cv_results_csv([full_output_file_name, *results['train_score'], np.mean(results['train_score']),
         *results['test_score'], np.mean(results['test_score'])])
 
-    results_logger.write_csv(f'{runner}_mse.csv', 'MSE results', results['mse_matrix'].T)
-    results_logger.write_csv(f'{runner}_r2.csv', 'R^2 results', results['r2_matrix'].T)
+    results_logger.save_csv(f'{runner}_mse.csv', 'MSE results', results['mse_matrix'].T)
+    results_logger.save_csv(f'{runner}_r2.csv', 'R^2 results', results['r2_matrix'].T)
     if output_graphs:
         mse_fig = sns.displot(results['mse_matrix'].mean(axis=1)).set_xlabels('MSE values')
-        results_logger.write_fig(f'{runner}_mse_dist.png', 'MSE histogram', mse_fig)
+        results_logger.save_figure(f'{runner}_mse_dist.png', 'MSE histogram', mse_fig)
         r2_fig = sns.displot(results['r2_matrix'].mean(axis=1)).set_xlabels('R^2 values')
-        results_logger.write_fig(f'{runner}_r2_dist.png', 'R^2 histogram', r2_fig)
+        results_logger.save_figure(f'{runner}_r2_dist.png', 'R^2 histogram', r2_fig)
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
@@ -105,7 +105,7 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
         drug_mutation_corr_matrix.to_csv(results_logger.get_path_in_dir(f"{model_name}.csv"))
         real_mut_drug_corr_matrix = ResourcesPath.DRUG_MUT_COR.get_dataframe(False)
 
-        results_logger.add_result_to_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
+        results_logger.add_result_to_cv_results_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
 
     intersecting_gene_names = beat_rnaseq.columns.intersection(tcga_rnaseq.columns)
     mutation_beat_indeies = _get_mutation_beat_patients()
