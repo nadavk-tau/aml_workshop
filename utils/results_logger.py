@@ -31,6 +31,19 @@ class ResultsLogger(object):
     def add_result_to_csv(self, result):
         self._csv.writerow(result)
 
+    def _write_file(self, output_file_name, readable_name, callback, **kwargs):
+        full_output_file_name = self.get_path_in_dir(output_file_name)
+        print(f"- Writing {readable_name} to '{full_output_file_name}'... ", end='')
+        callback(full_output_file_name, **kwargs)
+        print('Done.')
+        return full_output_file_name
+
+    def write_csv(self, output_file_name, readable_name, dataframe, **kwargs):
+        return self._write_file(output_file_name, readable_name, dataframe.to_csv, **kwargs)
+
+    def write_fig(self, output_file_name, readable_name, fig, **kwargs):
+        return self._write_file(output_file_name, readable_name, fig.savefig, **kwargs)
+
     def __enter__(self):
         os.makedirs(self._base_path)
         self._csv_output_fd = open(self.get_path_in_dir('cv_results.csv'), 'w')

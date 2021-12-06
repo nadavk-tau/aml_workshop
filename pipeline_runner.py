@@ -23,33 +23,24 @@ def run_cv(runner):
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
-
 def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=False):
     print(f">>> Running on \'{runner}\':")
     results = runner.run_cross_validation_and_get_estimated_results(cv=cv, return_estimator=True)
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
-    output_file_name = results_logger.get_path_in_dir(f'{runner}_estimated_results.tsv')
-    print(f"- Writing estimated results to '{output_file_name}'... ", end='')
-    results['estimated_results'].T.to_csv(output_file_name, sep='\t')
-    print('Done.')
-    results_logger.add_result_to_csv([output_file_name, *results['train_score'], np.mean(results['train_score']),
+    full_output_file_name = results_logger.write_csv(f'{runner}_estimated_results.tsv', 'estimated results',
+        results['estimated_results'].T, sep='\t')
+    results_logger.add_result_to_csv([full_output_file_name, *results['train_score'], np.mean(results['train_score']),
         *results['test_score'], np.mean(results['test_score'])])
 
-    mse_amtrix_file_name = results_logger.get_path_in_dir(f'{runner}_mse.csv')
-    print(f"- Writing mse results to '{mse_amtrix_file_name}'... ", end='')
-    results['mse_matrix'].T.to_csv(mse_amtrix_file_name)
-    print('Done.')
-
-    r2_matrix_file_name = results_logger.get_path_in_dir(f'{runner}_r2.csv')
-    print(f"- Writing r^2 results to '{r2_matrix_file_name}'... ", end='')
-    results['r2_matrix'].T.to_csv(r2_matrix_file_name)
-    print('Done.')
-    
+    results_logger.write_csv(f'{runner}_mse.csv', 'MSE results', results['mse_matrix'].T)
+    results_logger.write_csv(f'{runner}_r2.csv', 'R^2 results', results['r2_matrix'].T)
     if output_graphs:
-        sns.displot(results['mse_matrix'].mean(axis=1)).set_xlabels('MSE values').savefig(results_logger.get_path_in_dir(f'{runner}_mse_dist.png'))
-        sns.displot(results['r2_matrix'].mean(axis=1)).set_xlabels('R^2 values').savefig(results_logger.get_path_in_dir(f'{runner}_r2_dist.png'))
+        mse_fig = sns.displot(results['mse_matrix'].mean(axis=1)).set_xlabels('MSE values')
+        results_logger.write_fig(f'{runner}_mse_dist.png', 'MSE histogram', mse_fig)
+        r2_fig = sns.displot(results['r2_matrix'].mean(axis=1)).set_xlabels('R^2 values')
+        results_logger.write_fig(f'{runner}_r2_dist.png', 'R^2 histogram', r2_fig)
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
