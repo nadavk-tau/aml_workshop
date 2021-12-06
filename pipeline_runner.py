@@ -69,9 +69,11 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         # RFEFeatureSlectionPipelineRunner('DecisionTree GradientBoostingRegressor', GradientBoostingRegressor(), DecisionTreeRegressor(), beat_rnaseq, beat_drug)
     ]
 
+    print('<<<<<<<< TASK1 BEGIN >>>>>>>>')
     with ResultsLogger('task1') as results_logger:
         for model in task1_models:
             run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger, output_graphs=True)
+    print('<<<<<<<< TASK1 END >>>>>>>>')
 
 
 def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
@@ -88,9 +90,11 @@ def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
         SemisupervisedPipelineRunner('SemisupervisedPipelineRunner', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, tcga_rnaseq)
     ]
 
+    print('<<<<<<<< TASK2 BEGIN >>>>>>>>')
     with ResultsLogger('task2') as results_logger:
         for model in task2_models:
             run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
+    print('<<<<<<<< TASK2 END >>>>>>>>')
 
 
 def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
@@ -107,6 +111,7 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
 
         results_logger.add_result_to_cv_results_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
 
+    print('<<<<<<<< TASK3 BEGIN >>>>>>>>')
     intersecting_gene_names = beat_rnaseq.columns.intersection(tcga_rnaseq.columns)
     mutation_beat_indeies = _get_mutation_beat_patients()
 
@@ -125,6 +130,7 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
             beat_mutations_predictions = model.get_classification_matrix(beat_rnaseq)
             drug_mutation_corr_matrix = calculate_mutation_drug_correlation_matrix(beat_mutations_predictions, beat_drug)
             _output_results(drug_mutation_corr_matrix, beat_drug, results_logger, str(model))
+    print('<<<<<<<< TASK3 END >>>>>>>>')
 
 
 def main():
@@ -137,8 +143,8 @@ def main():
     subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
 
     task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    # task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    # task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
+    task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
+    task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
 
 
 if __name__ == '__main__':
