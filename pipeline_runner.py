@@ -1,7 +1,9 @@
 import numpy as np
 import seaborn as sns
+import pandas as pd
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
+from utils.classifier_results_utils import analyze_classifier
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
     FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
@@ -100,25 +102,32 @@ def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
     print('<<<<<<<< TASK2 END >>>>>>>>')
 
 
-def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
+def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, tcga_mutations):
 
     def _get_mutation_beat_patients():
         return [parient.replace('\n', '') for parient in open(ResourcesPath.DRUG_MUT_COR_LABELS.get_path(), 'r').readlines()]
 
-    def _output_results(drug_mutation_corr_matrix, beat_drug, results_logger, model_name):
-        drug_mutation_corr_matrix.index = beat_drug.columns
-        drug_mutation_corr_matrix = drug_mutation_corr_matrix.fillna(0)
-
+    def _output_results(drug_mutation_corr_matrix, results_logger, model_name):
         drug_mutation_corr_matrix.to_csv(results_logger.get_path_in_dir(f"{model_name}.csv"))
         real_mut_drug_corr_matrix = ResourcesPath.DRUG_MUT_COR.get_dataframe(False)
 
         results_logger.add_result_to_cv_results_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
 
+    def _output_task1_to_task3_results(pipeline_runner, tcga_rnaseq, results_logger):
+        pipeline_runner.pipeline.fit(pipeline_runner.X, pipeline_runner.y)
+        tcga_drug_predictions = pipeline_runner.pipeline.predict(tcga_rnaseq)
+        tcga_drug_predictions = pd.DataFrame(tcga_drug_predictions, columns=pipeline_runner.y.columns, index=tcga_rnaseq.index)
+
+        drug_mutation_corr_matrix = calculate_mutation_drug_correlation_matrix(ResourcesPath.TCGA_MUT.get_dataframe(), tcga_drug_predictions)
+        _output_results(drug_mutation_corr_matrix, results_logger, str(pipeline_runner))
+
+
     print('<<<<<<<< TASK3 BEGIN >>>>>>>>')
     intersecting_gene_names = beat_rnaseq.columns.intersection(tcga_rnaseq.columns)
     mutation_beat_indeies = _get_mutation_beat_patients()
 
-    beat_rnaseq = beat_rnaseq.loc[mutation_beat_indeies, intersecting_gene_names]
+    beat_rnaseq = beat_rnaseq.loc[:, intersecting_gene_names]
+    beat_rnaseq_only_mutaions = beat_rnaseq.loc[mutation_beat_indeies, :]
     tcga_rnaseq = tcga_rnaseq.loc[:, intersecting_gene_names]
 
     task3_models = [
@@ -130,9 +139,14 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, tcga_mutations):
 
     with ResultsLogger('task3', ["model", "mse"]) as results_logger:
         for model in task3_models:
-            beat_mutations_predictions = model.get_classification_matrix(beat_rnaseq)
-            drug_mutation_corr_matrix = calculate_mutation_drug_correlation_matrix(beat_mutations_predictions, beat_drug)
-            _output_results(drug_mutation_corr_matrix, beat_drug, results_logger, str(model))
+            beat_mutations_predictions = model.get_classification_matrix(beat_rnaseq_only_mutaions)
+            drug_mutation_corr_matrix = calculate_mutation_drug_correlation_matrix(beat_mutations_predictions, beat_drug_without_missing_IC50)
+            _output_results(drug_mutation_corr_matrix, results_logger, str(model))
+            analyze_classifier(model, results_logger.get_path_in_dir(f"{str(model)}_MUTATION_NAME_roc_analysis.png"))
+
+        task1_selected_model = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
+        _output_task1_to_task3_results(task1_selected_model, tcga_rnaseq, results_logger)
+
     print('<<<<<<<< TASK3 END >>>>>>>>')
 
 
@@ -147,7 +161,7 @@ def main():
 
     task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
     task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
+    task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
 
 
 if __name__ == '__main__':

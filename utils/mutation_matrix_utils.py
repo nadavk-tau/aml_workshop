@@ -46,4 +46,8 @@ def calculate_mutation_drug_correlation_matrix(mutation_matrix, drug_respose):
             corr, p_value = spearmanr(mut_vec, drug_vec)
             results[mutation].append(corr)
 
-    return pd.DataFrame.from_dict(results)
+    drug_mutation_corr_matrix = pd.DataFrame.from_dict(results)
+    drug_mutation_corr_matrix.index = drug_respose.columns
+    drug_mutation_corr_matrix = drug_mutation_corr_matrix.fillna(0)
+
+    return drug_mutation_corr_matrix
