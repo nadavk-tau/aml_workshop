@@ -28,15 +28,28 @@ class ResultsLogger(object):
     def get_path_in_dir(self, file):
         return os.path.join(self._base_path, self._camel_case_to_snake_case(file))
 
-    def add_result_to_csv(self, result):
-        self._csv.writerow(result)
+    def add_result_to_cv_results_csv(self, result):
+        self._cv_results_csv.writerow(result)
+
+    def _write_file(self, output_file_name, readable_name, callback, **kwargs):
+        full_output_file_name = self.get_path_in_dir(output_file_name)
+        print(f"- Writing {readable_name} to '{full_output_file_name}'... ", end='')
+        callback(full_output_file_name, **kwargs)
+        print('Done.')
+        return full_output_file_name
+
+    def save_csv(self, output_file_name, readable_name, dataframe, **kwargs):
+        return self._write_file(output_file_name, readable_name, dataframe.to_csv, **kwargs)
+
+    def save_figure(self, output_file_name, readable_name, fig, **kwargs):
+        return self._write_file(output_file_name, readable_name, fig.savefig, **kwargs)
 
     def __enter__(self):
         os.makedirs(self._base_path)
-        self._csv_output_fd = open(self.get_path_in_dir('cv_results.csv'), 'w')
-        self._csv = csv.writer(self._csv_output_fd)
-        self._csv.writerow(self.results_columns)
+        self._cv_results_csv_fd = open(self.get_path_in_dir('cv_results.csv'), 'w')
+        self._cv_results_csv = csv.writer(self._cv_results_csv_fd)
+        self._cv_results_csv.writerow(self.results_columns)
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        self._csv_output_fd.close()
+        self._cv_results_csv_fd.close()

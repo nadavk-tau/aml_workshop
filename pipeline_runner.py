@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import seaborn as sns
+import pandas as pd
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.classifier_results_utils import analyze_classifier
@@ -24,25 +25,24 @@ def run_cv(runner):
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
-
-def run_cv_and_save_estimated_results(runner, cv, results_logger):
+def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=False):
     print(f">>> Running on \'{runner}\':")
-    results = runner.run_cross_validation(cv=cv, return_estimator=True)
+    results = runner.run_cross_validation_and_get_estimated_results(cv=cv)
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
-    estimated_results = pd.DataFrame()
-    for i, (_, test_indexes) in enumerate(cv):
-        test_patients = runner.X.iloc[test_indexes]
-        test_results = results['estimator'][i].predict(test_patients)
-        estimated_results = estimated_results.append(pd.DataFrame(test_results, index=test_patients.index))
-    estimated_results.columns = runner.y.columns
 
-    output_file_name = results_logger.get_path_in_dir(f'{runner}_results.tsv')
-    print(f"- Writing estimated results to '{output_file_name}'... ", end='')
-    estimated_results.T.to_csv(output_file_name, sep='\t')
-    print('Done.')
-    results_logger.add_result_to_csv([output_file_name, *results['train_score'], np.mean(results['train_score']),
+    full_output_file_name = results_logger.save_csv(f'{runner}_estimated_results.tsv', 'estimated results',
+        results['estimated_results'], sep='\t')
+    results_logger.add_result_to_cv_results_csv([full_output_file_name, *results['train_score'], np.mean(results['train_score']),
         *results['test_score'], np.mean(results['test_score'])])
+
+    results_logger.save_csv(f'{runner}_mse.csv', 'MSE results', results['mse_matrix'])
+    results_logger.save_csv(f'{runner}_r2.csv', 'R^2 results', results['r2_matrix'])
+    if output_graphs:
+        mse_fig = sns.displot(results['mse_matrix'].mean(axis=1)).set_xlabels('MSE values')
+        results_logger.save_figure(f'{runner}_mse_dist.png', 'MSE histogram', mse_fig)
+        r2_fig = sns.displot(results['r2_matrix'].mean(axis=1)).set_xlabels('R^2 values')
+        results_logger.save_figure(f'{runner}_r2_dist.png', 'R^2 histogram', r2_fig)
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
@@ -64,16 +64,21 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         RawPipelineRunner('Raw RegressorChain', RegressorChain(Lasso(alpha=1.0), order='random', random_state=10), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         RawPipelineRunner('Raw GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42, max_features='log2')), beat_rnaseq, beat_drug),
-        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50)
+        PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
+        RawPipelineRunner('Raw MultioutLasso', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=1.0)), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultioutLasso2', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.7)), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultioutLasso3', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.8)), beat_rnaseq, beat_drug)
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # MutualInfoRegressionFeatureSlectionPipelineRunner('MutualInfoRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunnerHuber', HuberRegressor(mModelFeatureSlectionPipelineRunnerax_iter=10000, alpha=0.3), beat_rnaseq, beat_drug)
         # RFEFeatureSlectionPipelineRunner('DecisionTree GradientBoostingRegressor', GradientBoostingRegressor(), DecisionTreeRegressor(), beat_rnaseq, beat_drug)
     ]
 
+    print('<<<<<<<< TASK1 BEGIN >>>>>>>>')
     with ResultsLogger('task1') as results_logger:
         for model in task1_models:
-            run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
+            run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger, output_graphs=True)
+    print('<<<<<<<< TASK1 END >>>>>>>>')
 
 
 def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
@@ -90,9 +95,12 @@ def task2(beat_rnaseq, tcga_rnaseq, beat_drug, subbmission2_folds):
         SemisupervisedPipelineRunner('SemisupervisedPipelineRunner', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, tcga_rnaseq)
     ]
 
+    print('<<<<<<<< TASK2 BEGIN >>>>>>>>')
     with ResultsLogger('task2') as results_logger:
         for model in task2_models:
             run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger)
+    print('<<<<<<<< TASK2 END >>>>>>>>')
+
 
 def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, tcga_mutations):
 
@@ -103,7 +111,7 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
         drug_mutation_corr_matrix.to_csv(results_logger.get_path_in_dir(f"{model_name}.csv"))
         real_mut_drug_corr_matrix = ResourcesPath.DRUG_MUT_COR.get_dataframe(False)
 
-        results_logger.add_result_to_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
+        results_logger.add_result_to_cv_results_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
 
     def _output_task1_to_task3_results(pipeline_runner, tcga_rnaseq, results_logger):
         pipeline_runner.pipeline.fit(pipeline_runner.X, pipeline_runner.y)
@@ -114,6 +122,7 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
         _output_results(drug_mutation_corr_matrix, results_logger, str(pipeline_runner))
 
 
+    print('<<<<<<<< TASK3 BEGIN >>>>>>>>')
     intersecting_gene_names = beat_rnaseq.columns.intersection(tcga_rnaseq.columns)
     mutation_beat_indeies = _get_mutation_beat_patients()
 
@@ -138,6 +147,8 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
         task1_selected_model = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
         _output_task1_to_task3_results(task1_selected_model, tcga_rnaseq, results_logger)
 
+    print('<<<<<<<< TASK3 END >>>>>>>>')
+
 
 def main():
     beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
@@ -156,5 +167,4 @@ def main():
 if __name__ == '__main__':
     import warnings
     warnings.filterwarnings("ignore")
-
     main()
