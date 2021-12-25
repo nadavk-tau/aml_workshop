@@ -1,15 +1,18 @@
-import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
 import pandas as pd
 import numpy as np
 
+import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
+
+from utils import mutation_matrix_utils
 from joblib import parallel_backend
-from sklearn.model_selection import cross_validate, cross_val_predict, train_test_split, GridSearchCV
+from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.feature_selection import SelectKBest, SelectFromModel
+from sklearn.feature_selection import SelectKBest, SelectFromModel, f_regression, mutual_info_regression, RFE
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, mannwhitneyu, f_oneway
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 class TrainingRunner(object):
@@ -33,6 +36,31 @@ class TrainingRunner(object):
         with parallel_backend('loky'):
             return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring,
                 return_estimator=return_estimator, return_train_score=True, verbose=self.VERBOSITY)
+
+    @staticmethod
+    def _metric_matrix_to_dataframe(metric_matrix, num_folds, column_names):
+        metric_dataframe = pd.DataFrame(metric_matrix, index=pd.Index(range(num_folds), name='fold'),
+            columns=column_names)
+        metric_dataframe.loc['mean'] = metric_dataframe.mean()
+        return metric_dataframe
+
+    def run_cross_validation_and_get_estimated_results(self, cv, scoring='neg_mean_squared_error'):
+        cv_results = self.run_cross_validation(cv, scoring=scoring, return_estimator=True)
+        estimated_results = pd.DataFrame()
+        mse_folds = []
+        r2_folds = []
+        for i, (_, test_indexes) in enumerate(cv):
+            test_patients = self.X.iloc[test_indexes]
+            results_true = self.y.iloc[test_indexes]
+            results_pred = pd.DataFrame(cv_results['estimator'][i].predict(test_patients),
+                index=test_patients.index, columns=results_true.columns)
+            estimated_results = estimated_results.append(results_pred)
+            mse_folds.append(mean_squared_error(results_true, results_pred, multioutput='raw_values'))
+            r2_folds.append(r2_score(results_true, results_pred, multioutput='raw_values'))
+        cv_results['estimated_results'] = estimated_results.T
+        cv_results['mse_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(mse_folds), len(cv), self.y.columns).T
+        cv_results['r2_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(r2_folds), len(cv), self.y.columns).T
+        return cv_results
 
     def __str__(self):
         return self._name
@@ -69,6 +97,25 @@ class ModelFeatureSlectionPipelineRunner(TrainingRunner):
     def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
                              ('training_model', MultiOutputRegressor(training_model))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+class RFEFeatureSlectionPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, n_features_to_select=0.3):
+        pipeline = Pipeline([('feature_selection_k_best', RFE(estimator=feature_selection_model, n_features_to_select=n_features_to_select)),
+                             ('training_model', MultiOutputRegressor(training_model))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+class FRegressionFeatureSlectionPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
+        pipeline = Pipeline([('training_model', MultiOutputRegressor(Pipeline([('feature_selection_k_best', SelectKBest(f_regression, k)),
+                                                                               ('training_model', training_model)])))])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
+class MutualInfoRegressionFeatureSlectionPipelineRunner(TrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 50):
+        pipeline = Pipeline([('training_model', MultiOutputRegressor(Pipeline([('feature_selection_k_best', SelectKBest(mutual_info_regression, k)),
+                                                                               ('training_model', training_model)])))])
         super().__init__(name, pipeline, features_data, target_data)
 
 
@@ -146,4 +193,47 @@ class SpearmanCorrelationPipelineRunner(TrainingRunner):
 
     def __init__(self, name: str, training_models, features_data: pd.DataFrame, target_data: pd.DataFrame, number_of_clusters=3):
         pipeline = Pipeline([('training_model', self.SpearmanCorrelationModelWrapper(training_models, number_of_clusters))])
+
+
+class ClassificationTrainingRunner(object):
+    RANDOM_STATE = 10
+    VERBOSITY = 0
+
+    def __init__(self, name: str, pipeline: Pipeline, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        self._name = name
+        self.pipeline = pipeline
+        self.X = features_data
+        self.y = target_data
+
+    def get_classification_matrix(self, target):
+        predicted_classification_data = {}
+
+        for column in self.y.columns:
+            current_y = self.y[column]
+
+            self.pipeline.fit(self.X, current_y)
+            predicted_classification_data[column] = self.pipeline.predict(target)
+
+        predicted_mutation_matrix = pd.DataFrame.from_dict(predicted_classification_data)
+        predicted_mutation_matrix.index = target.index
+
+        return predicted_mutation_matrix
+
+    def __str__(self):
+        return self._name
+
+
+class MannWhtUCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 10):
+        mannwhtu_corr_function = mutation_matrix_utils.corr_function_generator(mannwhitneyu)
+
+        pipeline = Pipeline([('feature_selection', SelectKBest(mannwhtu_corr_function, k=k),),('model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
+class FOneWayCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 10):
+        f_oneway_corr_function = mutation_matrix_utils.corr_function_generator(f_oneway)
+
+        pipeline = Pipeline([('feature_selection', SelectKBest(f_oneway_corr_function, k=k),),('model', training_model)])
         super().__init__(name, pipeline, features_data, target_data)
