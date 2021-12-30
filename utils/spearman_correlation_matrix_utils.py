@@ -1,21 +1,24 @@
 import pandas as pd
+import gc
 
 from sklearn.cluster import KMeans
 from scipy.stats import spearmanr
 
 
 def get_top_50_featuers_for_set(X, drugs):
+    print("get_top_50_featuers_for_set")
     selected_genes = set()
 
     for drug in drugs.columns:
         y = drugs[drug]
         features = []
-        for gene in X.columns:
-            corr, _ = spearmanr(X[gene], y)
-            features.append((gene, abs(corr)))
+        for gene_index, gene in enumerate(X.T):
+            corr, _ = spearmanr(gene, y)
+            features.append((gene_index, abs(corr)))
 
+        gc.collect()
         current_top_featuers = sorted(features, key=lambda x: x[1], reverse=True)[:50]
-        selected_genes = selected_genes | set([gene for gene, corr in current_top_featuers])
+        selected_genes = selected_genes | set([gene_index for gene_index, corr in current_top_featuers])
 
     return list(selected_genes)
 
@@ -27,7 +30,7 @@ def calc_spearman_for_selected_genes(X, drugs, selected_genes):
         y = drugs[drug]
         drug_gene_correnlation = []
         for gene in selected_genes:
-            corr, _ = spearmanr(X[gene], y)
+            corr, _ = spearmanr(X.T[gene], y)
             drug_gene_correnlation.append(corr)
         drug_to_selected_genes_corr[drug] = drug_gene_correnlation
 
