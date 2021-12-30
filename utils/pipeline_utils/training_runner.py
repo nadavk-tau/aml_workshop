@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
 
-from utils import mutation_matrix_utils
+import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
 
+from utils import mutation_matrix_utils
 from joblib import parallel_backend
 from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.feature_selection import SelectKBest, SelectFromModel, f_regression, mutual_info_regression, RFE
+from sklearn.feature_selection import SelectKBest, SelectFromModel, VarianceThreshold,  RFE, f_regression, mutual_info_regression
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
@@ -35,7 +36,7 @@ class TrainingRunner(object):
         with parallel_backend('loky'):
             return cross_validate(self.pipeline, self.X, self.y, cv=cv, scoring=scoring,
                 return_estimator=return_estimator, return_train_score=True, verbose=self.VERBOSITY)
-    
+
     @staticmethod
     def _metric_matrix_to_dataframe(metric_matrix, num_folds, column_names):
         metric_dataframe = pd.DataFrame(metric_matrix, index=pd.Index(range(num_folds), name='fold'),
@@ -162,6 +163,77 @@ class SemisupervisedPipelineRunner(TrainingRunner):
     def __init__(self, name: str, model, supervised_features_data: pd.DataFrame, target_data: pd.DataFrame, un_supervised_features_data: pd.DataFrame):
         pipeline = Pipeline([('model', self.SemisupervisedModelWrapper(model, un_supervised_features_data))])
         super().__init__(name, pipeline, supervised_features_data, target_data)
+
+class SpearmanCorrelationClustingPipelineRunner(TrainingRunner):
+    PRE_CALCULATED_CLUSTERS = {
+                                63101: np.array([0, 0, 0, 2, 2, 0, 1, 2, 1, 2, 0, 1, 2, 1, 2, 1, 2, 1, 1, 0, 0, 1, 2, 1, 0, 0, 2, 1, 1, 1, 1, 2, 0, 2, 1, 0, 0
+                                                , 0, 1, 0, 1, 2, 2, 0, 1, 0, 1, 0, 2, 1, 0, 0, 1, 0, 1, 2, 0, 0, 1, 2, 0, 1, 2, 1, 2, 1, 0, 2, 2, 1, 1, 2, 1, 0
+                                                , 0, 2, 1, 2, 1]),
+                                62995: np.array([1, 2, 1, 2, 2, 1, 0, 2, 0, 2, 2, 0, 2, 0, 2, 0, 2, 0, 0, 1, 1, 0, 1, 2, 1, 2, 2, 0, 2, 0, 0, 2, 2, 2, 0, 2, 1
+                                                , 1, 0, 1, 0, 2, 2, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 2, 0, 1, 1, 0, 1, 1, 0, 2, 0, 2, 0, 1, 2, 1, 0, 0, 2, 0, 1
+                                                , 1, 2, 0, 2, 0]),
+                                63049: np.array([1, 2, 1, 0, 0, 1, 0, 2, 0, 1, 2, 0, 2, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 2, 1, 1, 1, 2, 0, 0, 0, 0, 2, 1, 0, 2, 1
+                                                , 1, 0, 1, 0, 1, 2, 2, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 2, 2, 0, 2, 0, 1, 2, 1, 0, 0, 1, 0, 1
+                                                , 1, 0, 2, 0, 2]),
+                                63418: np.array([2, 2, 0, 2, 2, 0, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 2, 1, 1, 0, 0, 1, 2, 2, 0, 0, 2, 1, 2, 1, 1, 2, 0, 2, 1, 0, 0
+                                                , 2, 1, 0, 1, 2, 2, 0, 1, 0, 1, 0, 0, 1, 2, 0, 1, 2, 1, 1, 2, 0, 1, 0, 0, 1, 2, 1, 2, 1, 0, 2, 2, 1, 1, 2, 1, 0
+                                                , 0, 2, 2, 2, 1]),
+                                63485: np.array([2, 2, 2, 1, 1, 2, 1, 1, 0, 1, 2, 0, 1, 0, 1, 1, 1, 0, 1, 2, 2, 0, 2, 1, 2, 2, 2, 0, 1, 0, 0, 1, 2, 1, 0, 2, 2
+                                                , 2, 0, 2, 1, 1, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 0, 2, 1, 1, 2, 2, 0, 2, 2, 1, 1, 0, 1, 0, 2, 1, 2, 0, 0, 1, 0, 2
+                                                , 2, 1, 0, 1, 0])
+    }
+
+
+    class SpearmanCorrelationModelWrapper(BaseEstimator, RegressorMixin):
+        def __init__(self, models, number_of_cluster, use_pre_calculated_clusters):
+            assert len(models) == number_of_cluster, "Number of cluster should be equal to models"
+
+            self.models = models
+            self.number_of_cluster = number_of_cluster
+            self.clusters = []
+            self.use_pre_calculated_clusters = use_pre_calculated_clusters
+
+        def _hash_fold(self, y):
+            return sum([ord(ch) for ch in ''.join(sorted(list(y.index)))])
+
+        def fit(self, X, y):
+            if self.use_pre_calculated_clusters:
+                fold_key = self._hash_fold(y)
+                self.clusters = SpearmanCorrelationClustingPipelineRunner.PRE_CALCULATED_CLUSTERS[fold_key]
+            else:
+                self.clusters = spearman_correlation_matrix_utils.cluster_drugs(X, y, self.number_of_cluster)
+                print(self.clusters)
+
+            for i in range(self.number_of_cluster):
+                y_tr = y.iloc[:, np.where(self.clusters == i)[0]]
+                self.models[i].fit(X, y_tr)
+
+
+            return self
+
+        def _constract_output_matrix(self, results):
+            cluster_current_index = {cluster_index: 0 for cluster_index in range(self.number_of_cluster)}
+            results_ordered_matrix = {}
+            for result_index, result_cluster in enumerate(self.clusters):
+                current_result = results[result_cluster][:, cluster_current_index[result_cluster]]
+                cluster_current_index[result_cluster] += 1
+
+                results_ordered_matrix[result_index] = current_result
+
+            return pd.DataFrame.from_dict(results_ordered_matrix).to_numpy()
+
+        def predict(self, X):
+            final_results = []
+            for i in range(self.number_of_cluster):
+                current_cluster_results = self.models[i].predict(X)
+                final_results.append(current_cluster_results)
+
+            return self._constract_output_matrix(final_results)
+
+
+    def __init__(self, name: str, training_models, features_data: pd.DataFrame, target_data: pd.DataFrame, number_of_clusters: int = 3, use_pre_calculated_clusters: bool = False):
+        pipeline = Pipeline([("low_variance_filter", VarianceThreshold(threshold=0.2)), ('training_model', self.SpearmanCorrelationModelWrapper(training_models, number_of_clusters, use_pre_calculated_clusters))])
+        super().__init__(name, pipeline, features_data, target_data)
 
 
 class ClassificationTrainingRunner(object):
