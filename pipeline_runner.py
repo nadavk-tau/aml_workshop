@@ -7,9 +7,12 @@ from utils.classifier_results_utils import analyze_classifier
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
     FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
-    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner)
+    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner)
 from utils.results_logger import ResultsLogger
 from utils.mutation_matrix_utils import calculate_mutation_drug_correlation_matrix
+
+from sklearn.pipeline import Pipeline
+from sklearn.feature_selection import SelectFromModel
 
 from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge, Lasso
 from sklearn.tree import DecisionTreeRegressor
@@ -65,13 +68,16 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         PCAPipelineRunner('PCA GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
         RawPipelineRunner('Raw GradientBoostingRegressor', MultiOutputRegressor(GradientBoostingRegressor(random_state=42, max_features='log2')), beat_rnaseq, beat_drug),
         PCAPipelineRunner('PCA RandomForestRegressor', MultiOutputRegressor(RandomForestRegressor(random_state=42)), beat_rnaseq, beat_drug, n_components=50),
-        SpearmanCorrelationPipelineRunner('Drug Cluster by Spearman Correlation', [MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8) for i in range(3)], beat_rnaseq, beat_drug, 3),
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso', [MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster and Random Forest', [RandomForestRegressor(random_state=10, max_depth=5) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), max_features=1000)),
+                             ('training_model', RandomForestRegressor(random_state=10, max_depth=5))]) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
         RawPipelineRunner('Raw MultioutLasso', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=1.0)), beat_rnaseq, beat_drug),
         RawPipelineRunner('Raw MultioutLasso2', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.7)), beat_rnaseq, beat_drug),
-        RawPipelineRunner('Raw MultioutLasso3', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.8)), beat_rnaseq, beat_drug)
+        RawPipelineRunner('Raw MultioutLasso3', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.8)), beat_rnaseq, beat_drug),
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # MutualInfoRegressionFeatureSlectionPipelineRunner('MutualInfoRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
-        # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunnerHuber', HuberRegressor(mModelFeatureSlectionPipelineRunnerax_iter=10000, alpha=0.3), beat_rnaseq, beat_drug)
+        # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunnerHuber', HuberRegressor(mModelFeatureSlectionPipelineRunnerax_iter=10000, alpha=0.3), beat_rnaseq, beat_drug),
         # RFEFeatureSlectionPipelineRunner('DecisionTree GradientBoostingRegressor', GradientBoostingRegressor(), DecisionTreeRegressor(), beat_rnaseq, beat_drug)
     ]
 
