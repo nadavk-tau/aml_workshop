@@ -7,7 +7,7 @@ from utils.classifier_results_utils import analyze_classifier
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
     FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
-    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner)
+    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner, SplittedPipelineRunner)
 from utils.results_logger import ResultsLogger
 from utils.mutation_matrix_utils import calculate_mutation_drug_correlation_matrix
 
@@ -75,6 +75,7 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         RawPipelineRunner('Raw MultioutLasso', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=1.0)), beat_rnaseq, beat_drug),
         RawPipelineRunner('Raw MultioutLasso2', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.7)), beat_rnaseq, beat_drug),
         RawPipelineRunner('Raw MultioutLasso3', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.8)), beat_rnaseq, beat_drug),
+        SplittedPipelineRunner('Random Foresset and MultiLasso', ),
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # MutualInfoRegressionFeatureSlectionPipelineRunner('MutualInfoRegressionFeatureSlectionPipelineRunner', GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # FRegressionFeatureSlectionPipelineRunner('FRegressionFeatureSlectionPipelineRunnerHuber', HuberRegressor(mModelFeatureSlectionPipelineRunnerax_iter=10000, alpha=0.3), beat_rnaseq, beat_drug),
@@ -167,8 +168,8 @@ def main():
     subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
 
     task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
+    # task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
+    # task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
 
 
 

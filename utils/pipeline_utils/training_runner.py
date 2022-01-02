@@ -1,8 +1,11 @@
+import enum
 import pandas as pd
 import numpy as np
+from scipy.stats.stats import mode
 
 import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
 
+from typing import Dict
 from utils import mutation_matrix_utils
 from joblib import parallel_backend
 from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
@@ -278,3 +281,44 @@ class FOneWayCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
 
         pipeline = Pipeline([('feature_selection', SelectKBest(f_oneway_corr_function, k=k),),('model', training_model)])
         super().__init__(name, pipeline, features_data, target_data)
+
+class SplittedPipelineRunner(TrainingRunner):
+    class SplittedPipelineWrapper(BaseEstimator, RegressorMixin):
+            def __init__(self, target_to_model: Dict[str, Pipeline]):
+                self.target_to_model = target_to_model
+                self.target_order = None
+
+            def fit(self, X, y):
+                self.targets_original_order = y.columns
+
+                for target, model in self.target_to_model.items():
+                    model.fit(X, y.loc[:, target])
+
+                return self
+
+            def _constract_output_matrix(self, results):
+                model_to_current_index = {str(model): 0 for model in self.target_to_model.values()}
+
+                results_ordered_matrix = {}
+                for target_index, target in enumerate(self.targets_original_order):
+                    for targets, model in self.target_to_model.items():
+                        if target not in targets:
+                            continue
+                        result_index = model_to_current_index[str(model)]
+                        model_to_current_index[str(model)] += 1
+
+                        result = results[str(model)][result_index]
+                        results_ordered_matrix[target_index] = result
+
+                return pd.DataFrame.from_dict(results_ordered_matrix).to_numpy()
+
+            def predict(self, X):
+                results = dict()
+                for model in self.target_to_model.values():
+                    current_result = model.predict(X)
+                    results[str(model)] = current_result
+
+                return self._constract_output_matrix(results)
+
+    def __init__(self, name: str, target_to_model: Dict[str, Pipeline], features_data: pd.DataFrame, target_data: pd.DataFrame):
+        super().__init__(name, self.SplittedPipelineWrapper(target_to_model), features_data, target_data)
