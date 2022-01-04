@@ -7,8 +7,9 @@ from sklearn.metrics import auc, precision_recall_curve, RocCurveDisplay, Precis
 from sklearn.model_selection import StratifiedKFold
 
 
+# Based on: https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc_crossval.html
 def _draw_roc_curve_for_mutation(mutation_name, classifier_runner, fig_path, cv=None):
-    cv = cv if cv else StratifiedKFold(n_splits=6)
+    cv = cv if cv else StratifiedKFold(n_splits=5)
 
     tprs = []
     aucs = []
@@ -60,51 +61,31 @@ def _draw_pr_curve_for_mutation(mutation_name, classifier_runner, fig_path, cv=N
     y = classifier_runner.y[mutation_name]
     X = classifier_runner.X
 
-    f, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-    axes[0].scatter(X[y==0,0], X[y==0,1], color='blue', s=2, label='y=0')
-    axes[0].scatter(X[y!=0,0], X[y!=0,1], color='red', s=2, label='y=1')
-    axes[0].set_xlabel('X[:,0]')
-    axes[0].set_ylabel('X[:,1]')
-    axes[0].legend(loc='lower left', fontsize='small')
-
+    fig, axes = plt.subplots()
     y_real = []
     y_proba = []
-    for i, (train_index, test_index) in enumerate(cv.split(X)):
-        Xtrain, Xtest = X[train_index], X[test_index]
+    for i, (train_index, test_index) in enumerate(cv.split(X, y)):
+        Xtrain, Xtest = X.iloc[train_index], X.iloc[test_index]
         ytrain, ytest = y[train_index], y[test_index]
-        classifier_runner.fit(Xtrain, ytrain)
-        pred_proba = classifier_runner.predict_proba(Xtest)
+        classifier_runner.pipeline.fit(Xtrain, ytrain)
+        pred_proba = classifier_runner.pipeline.predict_proba(Xtest)
         precision, recall, _ = precision_recall_curve(ytest, pred_proba[:,1])
-        lab = 'Fold %d AUC=%.4f' % (i+1, auc(recall, precision))
-        axes[1].step(recall, precision, label=lab)
+        lab = f'Fold {i + 1} AUC={auc(recall, precision):.4f}'
+        axes.step(recall, precision, label=lab)
         y_real.append(ytest)
         y_proba.append(pred_proba[:,1])
 
     y_real = np.concatenate(y_real)
     y_proba = np.concatenate(y_proba)
     precision, recall, _ = precision_recall_curve(y_real, y_proba)
-    lab = 'Overall AUC=%.4f' % (auc(recall, precision))
-    axes[1].step(recall, precision, label=lab, lw=2, color='black')
-    axes[1].set_xlabel('Recall')
-    axes[1].set_ylabel('Precision')
-    axes[1].legend(loc='lower left', fontsize='small')
-
-    f.tight_layout()
-
-    # fig, ax = plt.subplots()
-    # for i, (train, test) in enumerate(cv.split(X, y)):
-    #     classifier_runner.pipeline.fit(X.iloc[train], y[train])
-    #     viz = PrecisionRecallDisplay.from_estimator(classifier_runner.pipeline, X.iloc[test], y[test],
-    #                                                 name="PR fold {}".format(i), alpha=0.3, lw=1, ax=ax,)
-    # ax.set(
-    #     # xlim=[-0.05, 1.05],
-    #     # ylim=[-0.05, 1.05],
-    #     title=f"Mutation {mutation_name}",
-    # )
-    # ax.legend(loc="lower right")
-
-    plt.savefig(fig_path)
+    overall_auc = auc(recall, precision)
+    lab = f'Overall AUC={overall_auc:.4f}'
+    axes.step(recall, precision, label=lab, lw=2, color='black')
+    axes.set_xlabel('Recall')
+    axes.set_ylabel('Precision')
+    fig.tight_layout()
+    axes.legend(loc='upper left')
+    fig.savefig(fig_path)
 
 
 def analyze_classifier_roc(classifier_runner, fig_path, cv=None):
