@@ -122,7 +122,8 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
         return [parient.replace('\n', '') for parient in open(ResourcesPath.DRUG_MUT_COR_LABELS.get_path(), 'r').readlines()]
 
     def _output_results(drug_mutation_corr_matrix, results_logger, model_name):
-        drug_mutation_corr_matrix.to_csv(results_logger.get_path_in_dir(f"{model_name}.csv"))
+        # Drugs are cols and mutations are rows
+        drug_mutation_corr_matrix.T.to_csv(results_logger.get_path_in_dir(f"{model_name}.tsv"), sep='\t')
         real_mut_drug_corr_matrix = ResourcesPath.DRUG_MUT_COR.get_dataframe(False)
 
         results_logger.add_result_to_cv_results_csv([model_name, mean_squared_error(drug_mutation_corr_matrix.loc[real_mut_drug_corr_matrix.index], real_mut_drug_corr_matrix)])
