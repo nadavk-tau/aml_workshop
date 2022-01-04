@@ -53,6 +53,7 @@ def _draw_roc_curve_for_mutation(mutation_name, classifier_runner, fig_path, cv=
     ax.legend(loc="lower right")
 
     plt.savefig(fig_path)
+    return mean_auc
 
 
 # Based on: https://stackoverflow.com/questions/29656550/how-to-plot-pr-curve-over-10-folds-of-cross-validation-in-scikit-learn
@@ -86,13 +87,18 @@ def _draw_pr_curve_for_mutation(mutation_name, classifier_runner, fig_path, cv=N
     fig.tight_layout()
     axes.legend(loc='upper left')
     fig.savefig(fig_path)
+    return overall_auc
 
 
 def analyze_classifier_roc(classifier_runner, fig_path, cv=None):
+    auc_sum = 0
     for mutation in classifier_runner.y.columns:
-        _draw_roc_curve_for_mutation(mutation, classifier_runner, fig_path.replace("mutation_name", mutation), cv)
+        auc_sum += _draw_roc_curve_for_mutation(mutation, classifier_runner, fig_path.replace("mutation_name", mutation), cv)
+    print(f'>>> {classifier_runner} - mean ROC AUC: {auc_sum / len(classifier_runner.y.columns)}')
 
 
 def analyze_classifier_pr(classifier_runner, fig_path, cv=None):
+    auc_sum = 0
     for mutation in classifier_runner.y.columns:
-        _draw_pr_curve_for_mutation(mutation, classifier_runner, fig_path.replace("mutation_name", mutation), cv)
+        auc_sum += _draw_pr_curve_for_mutation(mutation, classifier_runner, fig_path.replace("mutation_name", mutation), cv)
+    print(f'>>> {classifier_runner} - mean PR AUC: {auc_sum / len(classifier_runner.y.columns)}')
