@@ -13,7 +13,7 @@ class DataTransformation(object):
     @staticmethod
     def log10(x):
         return np.log10(x)
-    
+
     @staticmethod
     def log2(x):
         return np.log2(x + 1)
@@ -58,3 +58,13 @@ class SubmissionFolds(object):
             test = fold_group.index.values
             result.append((train, test))
         return result
+
+class Task3Features(object):
+    @staticmethod
+    def get_features_per_gene():
+        gene_to_selected_features = {}
+
+        for file in path_consts.TASK3_FEATURES_PATH.glob('*.csv'):
+            gene_to_selected_features[file.stem] = pd.read_csv(file, sep='\t')["Gene Name"].tolist()
+
+        return gene_to_selected_features
