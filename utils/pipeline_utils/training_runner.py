@@ -13,6 +13,7 @@ from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from scipy.stats import spearmanr, mannwhitneyu, f_oneway
 from sklearn.metrics import mean_squared_error, r2_score
+from utils.data_parser import Task3Features
 
 
 class TrainingRunner(object):
@@ -278,3 +279,32 @@ class FOneWayCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
 
         pipeline = Pipeline([('feature_selection', SelectKBest(f_oneway_corr_function, k=k),),('model', training_model)])
         super().__init__(name, pipeline, features_data, target_data)
+
+
+class BaysianFeatureSelectionMutationPipelineRunner(ClassificationTrainingRunner):
+
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        pipeline = Pipeline([('model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
+
+    def get_classification_matrix(self, target):
+        predicted_classification_data = {}
+        gene_to_selected_features = Task3Features.get_features_per_gene()
+
+        for gene in self.y.columns:
+            current_y = self.y[gene]
+            selected_features = set(gene_to_selected_features[gene]) & set(self.X.columns)
+
+            current_X = self.X
+            current_target = target
+            if gene not in ["NRAS", "TET2"]:
+                current_X = self.X[selected_features]
+                current_target = target[selected_features]
+
+            self.pipeline.fit(current_X, current_y)
+            predicted_classification_data[gene] = self.pipeline.predict(current_target)
+
+        predicted_mutation_matrix = pd.DataFrame.from_dict(predicted_classification_data)
+        predicted_mutation_matrix.index = target.index
+
+        return predicted_mutation_matrix

@@ -7,7 +7,8 @@ from utils.classifier_results_utils import analyze_classifier
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
     FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
-    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner)
+    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner,
+    BaysianFeatureSelectionMutationPipelineRunner)
 from utils.results_logger import ResultsLogger
 from utils.mutation_matrix_utils import calculate_mutation_drug_correlation_matrix
 
@@ -15,6 +16,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectFromModel
 
 from sklearn.linear_model import MultiTaskLasso, LinearRegression, HuberRegressor, Ridge, Lasso
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, GradientBoostingClassifier
 from sklearn.multioutput import MultiOutputRegressor, RegressorChain
@@ -141,7 +148,20 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
         FOneWayCorrelationMutationPipelineRunner("F One Way Correlation Mutation", GradientBoostingClassifier(n_estimators=10), tcga_rnaseq, tcga_mutations, 10),
         FOneWayCorrelationMutationPipelineRunner("F One Way Correlation Mutation high tol", GradientBoostingClassifier(n_estimators=10, tol=0.01), tcga_rnaseq, tcga_mutations, 10),
         MannWhtUCorrelationMutationPipelineRunner("Mann Wht U Correlation Mutation", GradientBoostingClassifier(n_estimators=10), tcga_rnaseq, tcga_mutations, 10),
-        MannWhtUCorrelationMutationPipelineRunner("Mann Wht U Correlation Mutation high tol", GradientBoostingClassifier(n_estimators=10, tol=0.01), tcga_rnaseq, tcga_mutations, 10)
+        MannWhtUCorrelationMutationPipelineRunner("Mann Wht U Correlation Mutation high tol", GradientBoostingClassifier(n_estimators=10, tol=0.01), tcga_rnaseq, tcga_mutations, 10),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and GradientBoostingClassifier", GradientBoostingClassifier(n_estimators=10, tol=0.01), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and KNeighborsClassifier 3 neighbors", KNeighborsClassifier(3), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and KNeighborsClassifier 5 neighbors", KNeighborsClassifier(5), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and KNeighborsClassifier 10 neighbors ", KNeighborsClassifier(10), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and KNeighborsClassifier distance", KNeighborsClassifier(5, weights="distance"), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and DecisionTreeClassifier", DecisionTreeClassifier(max_depth=20), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and RandomForestClassifier 3 depth", RandomForestClassifier(max_depth=3, n_estimators=10), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and RandomForestClassifier 5 depth", RandomForestClassifier(max_depth=5, n_estimators=10), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and RandomForestClassifier 10 depth", RandomForestClassifier(max_depth=10, n_estimators=10), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and LogisticRegression l2", LogisticRegression(), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and LogisticRegression l2 liblinear", LogisticRegression(penalty="l2", solver="newton-cg"), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and LogisticRegression l1 liblinear", LogisticRegression(penalty="l1", solver="liblinear"), tcga_rnaseq, tcga_mutations),
+        BaysianFeatureSelectionMutationPipelineRunner("Reactome feature selection and LogisticRegression l1 saga", LogisticRegression(penalty="l1", solver="saga"), tcga_rnaseq, tcga_mutations),
     ]
 
     with ResultsLogger('task3', ["model", "mse"]) as results_logger:
