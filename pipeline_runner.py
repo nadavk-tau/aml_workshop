@@ -3,7 +3,7 @@ import seaborn as sns
 import pandas as pd
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
-from utils.classifier_results_utils import analyze_classifier
+from utils.classifier_results_utils import analyze_classifier_roc, analyze_classifier_pr
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
     FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
@@ -170,7 +170,8 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
             beat_mutations_predictions = model.get_classification_matrix(beat_rnaseq_only_mutaions)
             drug_mutation_corr_matrix = calculate_mutation_drug_correlation_matrix(beat_mutations_predictions, beat_drug_without_missing_IC50)
             _output_results(drug_mutation_corr_matrix, results_logger, str(model))
-            analyze_classifier(model, results_logger.get_path_in_dir(f"{str(model)}_MUTATION_NAME_roc_analysis.png"))
+            analyze_classifier_roc(model, results_logger.get_path_in_dir(f"{str(model)}_MUTATION_NAME_roc_analysis.png"))
+            analyze_classifier_pr(model, results_logger.get_path_in_dir(f"{str(model)}_MUTATION_NAME_pr_analysis.png"))
 
         task1_selected_model = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
         _output_task1_to_task3_results(task1_selected_model, tcga_rnaseq, results_logger)
