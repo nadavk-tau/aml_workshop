@@ -8,7 +8,7 @@ from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRun
     PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
     FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
     FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner,
-    BaysianFeatureSelectionMutationPipelineRunner, Chi2Selector)
+    BaysianFeatureSelectionMutationPipelineRunner, RawClassificationTrainingRunner, Chi2Selector)
 from utils.results_logger import ResultsLogger
 from utils.mutation_matrix_utils import calculate_mutation_drug_correlation_matrix
 
@@ -159,6 +159,14 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
     tcga_rnaseq = tcga_rnaseq.loc[:, intersecting_gene_names]
 
     task3_models = [
+        RawClassificationTrainingRunner("logistic regression", LogisticRegression(), tcga_rnaseq, tcga_mutations),
+        RawClassificationTrainingRunner("logistic regression c0.7", LogisticRegression(C=0.7), tcga_rnaseq, tcga_mutations), # best 0.007489285
+        RawClassificationTrainingRunner("logistic regression c0.7 10000 iter", LogisticRegression(C=0.7, max_iter=10000), tcga_rnaseq, tcga_mutations),
+        RawClassificationTrainingRunner("logistic regression c0.8", LogisticRegression(C=0.8), tcga_rnaseq, tcga_mutations),
+        RawClassificationTrainingRunner("logistic regression c0.5", LogisticRegression(C=0.5), tcga_rnaseq, tcga_mutations),
+        RawClassificationTrainingRunner("logistic regression c0.2", LogisticRegression(C=0.2), tcga_rnaseq, tcga_mutations),
+        RawClassificationTrainingRunner("logistic regression 10000 iter", LogisticRegression(max_iter=10000), tcga_rnaseq, tcga_mutations),
+        RawClassificationTrainingRunner("logistic regression l1", LogisticRegression(penalty='elasticnet', solver='saga', l1_ratio=0.5), tcga_rnaseq, tcga_mutations),
         FOneWayCorrelationMutationPipelineRunner("F One Way Correlation Mutation", GradientBoostingClassifier(n_estimators=10), tcga_rnaseq, tcga_mutations, 10),
         FOneWayCorrelationMutationPipelineRunner("F One Way Correlation Mutation high tol", GradientBoostingClassifier(n_estimators=10, tol=0.01), tcga_rnaseq, tcga_mutations, 10),
         MannWhtUCorrelationMutationPipelineRunner("Mann Wht U Correlation Mutation", GradientBoostingClassifier(n_estimators=10), tcga_rnaseq, tcga_mutations, 10),
