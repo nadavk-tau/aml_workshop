@@ -265,6 +265,12 @@ class ClassificationTrainingRunner(object):
         return self._name
 
 
+class RawClassificationTrainingRunner(ClassificationTrainingRunner):
+    def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame):
+        pipeline = Pipeline([('model', training_model)])
+        super().__init__(name, pipeline, features_data, target_data)
+
+
 class MannWhtUCorrelationMutationPipelineRunner(ClassificationTrainingRunner):
     def __init__(self, name: str, training_model, features_data: pd.DataFrame, target_data: pd.DataFrame, k: int = 10):
         mannwhtu_corr_function = mutation_matrix_utils.corr_function_generator(mannwhitneyu)
