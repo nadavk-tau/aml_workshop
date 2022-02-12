@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+import seaborn as sns
 
 import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
 
+from config import path_consts
 from utils import mutation_matrix_utils
 from joblib import parallel_backend
 from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
@@ -11,9 +13,12 @@ from sklearn.feature_selection import SelectKBest, SelectFromModel, VarianceThre
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
+from sklearn.cluster import KMeans
 from scipy.stats import spearmanr, mannwhitneyu, f_oneway
+from sklearn.feature_selection import chi2
 from sklearn.metrics import mean_squared_error, r2_score
 from utils.data_parser import Task3Features
+from scipy.signal import find_peaks
 
 
 class TrainingRunner(object):
@@ -186,29 +191,37 @@ class SpearmanCorrelationClustingPipelineRunner(TrainingRunner):
 
 
     class SpearmanCorrelationModelWrapper(BaseEstimator, RegressorMixin):
-        def __init__(self, models, number_of_cluster, use_pre_calculated_clusters):
+        def __init__(self, models, number_of_cluster, use_pre_calculated_clusters: bool = False, force_cluster_calculation: bool = False):
             assert len(models) == number_of_cluster, "Number of cluster should be equal to models"
 
             self.models = models
             self.number_of_cluster = number_of_cluster
             self.clusters = []
             self.use_pre_calculated_clusters = use_pre_calculated_clusters
+            self.force_cluster_calculation = force_cluster_calculation
 
         def _hash_fold(self, y):
             return sum([ord(ch) for ch in ''.join(sorted(list(y.index)))])
 
         def fit(self, X, y):
+            fold_key = self._hash_fold(y)
             if self.use_pre_calculated_clusters:
-                fold_key = self._hash_fold(y)
                 self.clusters = SpearmanCorrelationClustingPipelineRunner.PRE_CALCULATED_CLUSTERS[fold_key]
+            elif self.force_cluster_calculation:
+                self.clusters = spearman_correlation_matrix_utils.cluster_drugs(X, y, self.number_of_cluster, fold_key)
             else:
-                self.clusters = spearman_correlation_matrix_utils.cluster_drugs(X, y, self.number_of_cluster)
-                print(self.clusters)
+                pre_calculated_corr_matrix_path = fr"{path_consts.DATA_FOLDER_PATH}/top_50_correlation_matrix/corr_matrix_{fold_key}"
+                pre_calculated_corr_matrix = pd.read_csv(pre_calculated_corr_matrix_path)
+                pre_calculated_corr_matrix.rename(columns={"Unnamed: 0": "Drug"}, inplace=True)
+                pre_calculated_corr_matrix.set_index("Drug", inplace=True)
+
+                clustring_model = KMeans(n_clusters=self.number_of_cluster)
+                clustring_model.fit(pre_calculated_corr_matrix)
+                self.clusters = clustring_model.predict(pre_calculated_corr_matrix)
 
             for i in range(self.number_of_cluster):
                 y_tr = y.iloc[:, np.where(self.clusters == i)[0]]
                 self.models[i].fit(X, y_tr)
-
 
             return self
 
@@ -235,6 +248,48 @@ class SpearmanCorrelationClustingPipelineRunner(TrainingRunner):
     def __init__(self, name: str, training_models, features_data: pd.DataFrame, target_data: pd.DataFrame, number_of_clusters: int = 3, use_pre_calculated_clusters: bool = False):
         pipeline = Pipeline([("low_variance_filter", VarianceThreshold(threshold=0.2)), ('training_model', self.SpearmanCorrelationModelWrapper(training_models, number_of_clusters, use_pre_calculated_clusters))])
         super().__init__(name, pipeline, features_data, target_data)
+
+class Chi2Selector:
+    def __init__(self) -> None:
+        self._bad_drug_list = ['Rapamycin', 'Trametinib (GSK1120212)', 'Doramapimod (BIRB 796)',
+       'Dasatinib', 'JAK Inhibitor I', 'Idelalisib', 'KI20227', 'Selumetinib (AZD6244)', 'Crenolanib', 'Flavopiridol', 'VX-745']
+
+    def _my_find_peaks(self, X):
+        ax = sns.kdeplot(X)
+        x = ax.lines[0].get_xdata()
+        y = ax.lines[0].get_ydata()
+        xy = [[x[i], y[i]] for i in range(len(x))]
+
+        peak_coord = [xy[i] for i in find_peaks(y)[0]]
+        sorted_peak = sorted(peak_coord, key=lambda x: x[1])
+
+        return np.array([peak[0] for peak in sorted_peak]).mean()
+
+    def transform(self, X):
+        return X[:, self._selected_columns]
+
+    def fit(self, X, y=None):
+        drug_size = y.shape[1]
+        self._selected_columns = set()
+
+        for drug_index in range(drug_size):
+            drug_name = y.columns[drug_index]
+            if drug_name not in self._bad_drug_list:
+                continue
+
+            if isinstance(y, pd.DataFrame):
+                drug_values = y.iloc[:, drug_index]
+            else:
+                drug_values = y[:, drug_index]
+
+            drug_mean = self._my_find_peaks(drug_values.copy())
+            labels = drug_values.copy().apply(lambda x: 1 if x > drug_mean else 0)
+            chi2_scores, p_value = chi2(X, labels)
+
+            self._selected_columns.update(p_value.argsort()[:5])
+
+        self._selected_columns = list(self._selected_columns)
+        return self
 
 
 class ClassificationTrainingRunner(object):
