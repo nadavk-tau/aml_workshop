@@ -199,6 +199,9 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
 
     print('<<<<<<<< TASK3 END >>>>>>>>')
 
+def dump_models(beat_rnaseq, tcga_rnaseq, beat_drug):
+    model_to_dump = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
+    model_to_dump.dump_train_model(beat_rnaseq, beat_drug, "task1", True)
 
 def main():
     beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
@@ -206,6 +209,8 @@ def main():
     beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
     beat_drug_without_missing_IC50 = ResourcesPath.BEAT_DRUG.get_dataframe(False, DataTransformation.log10)
     tcga_mutations = ResourcesPath.TCGA_MUT.get_dataframe()
+
+    dump_models(beat_rnaseq, tcga_rnaseq, beat_drug)
 
     subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
 
