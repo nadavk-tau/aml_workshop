@@ -1,9 +1,13 @@
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import pickle
+import os
+
 
 import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_utils
 
+from datetime import datetime
 from config import path_consts
 from utils import mutation_matrix_utils
 from joblib import parallel_backend
@@ -67,6 +71,23 @@ class TrainingRunner(object):
         cv_results['mse_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(mse_folds), len(cv), self.y.columns).T
         cv_results['r2_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(r2_folds), len(cv), self.y.columns).T
         return cv_results
+
+    def dump_train_model(self, X, y, output_file_name, is_final = False):
+        trained_pipeline = self.pipeline.fit(X, y)
+
+        output_file_path = path_consts.TRAINNED_MDOELS_PATH / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        os.makedirs(output_file_path, exist_ok=False)
+
+        model_file_name = f"{output_file_name}.model"
+        temp_output_file_path = output_file_path / model_file_name
+
+        with open(temp_output_file_path, 'wb+') as output_file:
+            pickle.dump(trained_pipeline, output_file)
+
+        if is_final:
+            os.makedirs(path_consts.FINAL_TRAINNED_MDOELS_PATH, exist_ok=True)
+            with open(path_consts.FINAL_TRAINNED_MDOELS_PATH / model_file_name, "wb+") as final_model:
+                pickle.dump(trained_pipeline, final_model)
 
     def __str__(self):
         return self._name
