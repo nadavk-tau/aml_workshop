@@ -80,7 +80,14 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         SpearmanCorrelationClustingPipelineRunner('Drug Cluster and Random Forest Precalculated Clustering', [RandomForestRegressor(random_state=10, max_depth=5) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
         SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest Pre calculated caluster', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.2), max_features=1000)),
                              ('training_model', RandomForestRegressor(random_state=10, max_depth=5))]) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
-
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 2', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), max_features=1000)),
+                             ('training_model', RandomForestRegressor(random_state=10, max_depth=5, n_estimators=300))]) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
+        # -0.40017291529307164
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 3', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), max_features=200)),
+                             ('training_model', RandomForestRegressor(random_state=10, max_depth=5, n_estimators=500))]) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
+        # -0.399366508767371
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 4', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), max_features=100)),
+                             ('training_model', RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500))]) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
         SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 7 cluster',
          [Pipeline([("var_threshold", VarianceThreshold(0.5)),
          ('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.3), max_features=5000)),
@@ -91,7 +98,6 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
          ('feature_selection_k_best', FeatureUnion([("select_from_multitasklasso", SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.3), max_features=5000)),
                                                     ("Chi2", Chi2Selector())])),
          ('training_model', RandomForestRegressor(random_state=10, max_depth=10, n_estimators=200))]) for i in range(3)], beat_rnaseq, beat_drug, 3),
-
         RawPipelineRunner('Raw MultioutLasso', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=1.0)), beat_rnaseq, beat_drug),
         RawPipelineRunner('Raw MultioutLasso2', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.7)), beat_rnaseq, beat_drug),
         RawPipelineRunner('Raw MultioutLasso3', MultiOutputRegressor(Lasso(random_state=10, max_iter=10000, alpha=0.8)), beat_rnaseq, beat_drug),
