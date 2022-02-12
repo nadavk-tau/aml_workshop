@@ -100,9 +100,10 @@ class SpearmanCorrelationPipelineRunner(TrainingRunner):
 
 
 class ModelFeatureSlectionPipelineRunner(TrainingRunner):
-    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
+    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50,
+                 model_is_multitask: bool = False):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
-                             ('training_model', MultiOutputRegressor(training_model))])
+                             ('training_model', training_model if model_is_multitask else MultiOutputRegressor(training_model))])
         super().__init__(name, pipeline, features_data, target_data)
 
 class RFEFeatureSlectionPipelineRunner(TrainingRunner):
@@ -210,7 +211,8 @@ class SpearmanCorrelationClustingPipelineRunner(TrainingRunner):
             elif self.force_cluster_calculation:
                 self.clusters = spearman_correlation_matrix_utils.cluster_drugs(X, y, self.number_of_cluster, fold_key)
             else:
-                pre_calculated_corr_matrix_path = fr"{path_consts.DATA_FOLDER_PATH}/top_50_correlation_matrix/corr_matrix_{fold_key}"
+                # pre_calculated_corr_matrix_path = fr"{path_consts.DATA_FOLDER_PATH}/top_50_correlation_matrix/corr_matrix_{fold_key}"
+                pre_calculated_corr_matrix_path = '50_spearman_corr_matrix.csv'
                 pre_calculated_corr_matrix = pd.read_csv(pre_calculated_corr_matrix_path)
                 pre_calculated_corr_matrix.rename(columns={"Unnamed: 0": "Drug"}, inplace=True)
                 pre_calculated_corr_matrix.set_index("Drug", inplace=True)

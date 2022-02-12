@@ -43,9 +43,10 @@ def cluster_drugs(X, drugs, clusters_number=3):
     print("got top 50")
     spearman_corr_matrix = calc_spearman_for_selected_genes(X, drugs, selected_genes)
     print("Calculated spearman corr matrix")
+    spearman_corr_matrix.to_csv('spearman_corr_matrix.csv')
 
-    kmeans_model = KMeans(n_clusters=clusters_number)
-    kmeans_model.fit(spearman_corr_matrix)
-    clusters = kmeans_model.predict(spearman_corr_matrix)
+    # kmeans_model = KMeans(n_clusters=clusters_number)
+    # kmeans_model.fit(spearman_corr_matrix)
+    # clusters = kmeans_model.predict(spearman_corr_matrix)
 
-    return clusters
+    # return clusters
