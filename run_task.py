@@ -89,8 +89,8 @@ def _run_model_tasks(parsed_args):
     input_data = _transform_input_data(pd.read_csv(parsed_args.input_file, sep='\t'))
 
     predictions = trained_model.predict(input_data)
-    nimrod_output = _transform_output_results(predictions, input_data.index)
-    nimrod_output.to_csv(parsed_args.output_file, sep='\t')
+    transformed_output = _transform_output_results(predictions, input_data.index)
+    transformed_output.to_csv(parsed_args.output_file, sep='\t')
 
 
 def _run_task3(parsed_args):
