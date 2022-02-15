@@ -71,8 +71,8 @@ class TrainingRunner(object):
         cv_results['r2_matrix'] = self._metric_matrix_to_dataframe(np.row_stack(r2_folds), len(cv), self.y.columns).T
         return cv_results
 
-    def dump_train_model(self, X, y, output_file_name, is_final = False):
-        trained_pipeline = self.pipeline.fit(X, y)
+    def dump_train_model(self, output_file_name, is_final = False):
+        trained_pipeline = self.pipeline.fit(self.X, self.y)
 
         output_file_path = path_consts.TRAINNED_MDOELS_PATH / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         os.makedirs(output_file_path, exist_ok=False)

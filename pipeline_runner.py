@@ -1,6 +1,7 @@
 import numpy as np
 import seaborn as sns
 import pandas as pd
+import argparse
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.classifier_results_utils import analyze_classifier_roc, analyze_classifier_pr
@@ -29,12 +30,55 @@ from sklearn.multioutput import MultiOutputRegressor, RegressorChain
 from sklearn.metrics import mean_squared_error
 
 
+class Tasks(Enum):
+    task1 = '1'
+    task2 = '2'
+    task3 = '3'
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description='Training pipeline runner')
+    subparsers = parser.add_subparsers()
+    train_parser = subparsers.add_parser('train')
+    train_parser.add_argument('task', type=Tasks, help='The task to be trained')
+    train_parser.set_defaults(func=train_models)
+    dump_parser = subparsers.add_parser('dump')
+    dump_parser.add_argument('task', type=Tasks, help='Dump the best task')
+    dump_parser.set_defaults(func=dump_models)
+    return parsed_args
+
+
+def get_beat_rnaseq():
+    return ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
+
+
+def get_tcga_rnaseq():
+    return ResourcesPath.TCGA_RNA.get_dataframe(True, DataTransformation.log2)
+
+
+def get_beat_drug():
+    return ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
+
+
+def get_beat_drug_without_missing_IC50():
+    return ResourcesPath.BEAT_DRUG.get_dataframe(False, DataTransformation.log10)
+
+
+def get_tcga_mutations():
+    return ResourcesPath.TCGA_MUT.get_dataframe()
+
+
+def get_subbmission2_folds():
+    return SubmissionFolds.get_submission2_beat_folds()
+
+
 def run_cv(runner):
     print(f">>> Running on \'{runner}\'")
     results = runner.run_cross_validation(cv=5)
     print(f"{runner} results:")
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
+
 
 def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=False):
     print(f">>> Running on \'{runner}\':")
@@ -202,28 +246,51 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
 
         task1_selected_model = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
         _output_task1_to_task3_results(task1_selected_model, tcga_rnaseq, results_logger)
-
     print('<<<<<<<< TASK3 END >>>>>>>>')
 
-def dump_models(beat_rnaseq, tcga_rnaseq, beat_drug):
-    model_to_dump = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
-    model_to_dump.dump_train_model(beat_rnaseq, beat_drug, "task1", True)
+
+def train_models(args):
+    if args.task == Tasks.task1:
+        task1(get_beat_rnaseq(), get_beat_drug(), get_subbmission2_folds())
+    elif args.task == Tasks.task2:
+        task2(get_beat_rnaseq(), get_tcga_rnaseq(), get_beat_drug(), get_subbmission2_folds())
+    elif args.task == Tasks.task3:
+        task3(get_beat_rnaseq(), get_tcga_rnaseq(), get_beat_drug(), get_beat_drug_without_missing_IC50(), get_tcga_mutations())
+    else:
+        raise RuntimeError("Invalid task")
+
+
+def dump_models(args):
+    if args.task == Tasks.task1:
+        model = ModelFeatureSlectionPipelineRunner(
+            'Multi Lasso (feature selection) and Random Forest 4',
+            RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500),
+            MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8),
+            get_beat_rnaseq(),
+            get_beat_drug(),
+            model_is_multitask=True
+        )
+        model.dump_train_model("task1", True)
+    elif args.task == Tasks.task2:
+        model = ModelFeatureSlectionPipelineRunner(
+            'Multi Lasso (feature selection) and Random Forest 4',
+            RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500),
+            MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8),
+            get_beat_rnaseq(),
+            get_beat_drug(),
+            model_is_multitask=True
+        )
+        model.dump_train_model("task2", True)
+    elif args.task == Tasks.task3:
+        model = RawClassificationTrainingRunner("logistic regression c0.8", LogisticRegression(C=0.8), tcga_rnaseq, tcga_mutations),
+        model.dump_train_model("task3", True)
+    else:
+        raise RuntimeError("Invalid task")
+
 
 def main():
-    beat_rnaseq = ResourcesPath.BEAT_RNASEQ.get_dataframe(True, DataTransformation.log2)
-    tcga_rnaseq = ResourcesPath.TCGA_RNA.get_dataframe(True, DataTransformation.log2)
-    beat_drug = ResourcesPath.BEAT_DRUG.get_dataframe(True, DataTransformation.log10)
-    beat_drug_without_missing_IC50 = ResourcesPath.BEAT_DRUG.get_dataframe(False, DataTransformation.log10)
-    tcga_mutations = ResourcesPath.TCGA_MUT.get_dataframe()
-
-    dump_models(beat_rnaseq, tcga_rnaseq, beat_drug)
-
-    subbmission2_folds = SubmissionFolds.get_submission2_beat_folds()
-
-    task1(beat_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    task2(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), subbmission2_folds)
-    task3(beat_rnaseq.copy(), tcga_rnaseq.copy(), beat_drug.copy(), beat_drug_without_missing_IC50.copy(), tcga_mutations.copy())
-
+    parsed_args = _parse_args()
+    args.func(args)
 
 
 if __name__ == '__main__':
