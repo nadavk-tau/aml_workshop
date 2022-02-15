@@ -118,11 +118,11 @@ class SpearmanCorrelationPipelineRunner(TrainingRunner):
                              ('training_model', MultiOutputRegressor(training_model))])
         super().__init__(name, pipeline, features_data, target_data)
 
-
 class ModelFeatureSlectionPipelineRunner(TrainingRunner):
-    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50):
+    def __init__(self, name: str, training_model, feature_selection_model, features_data: pd.DataFrame, target_data: pd.DataFrame, max_features: int = 50,
+                 model_is_multitask: bool = False):
         pipeline = Pipeline([('feature_selection_k_best', SelectFromModel(estimator=feature_selection_model, max_features=max_features)),
-                             ('training_model', MultiOutputRegressor(training_model))])
+                             ('training_model', training_model if model_is_multitask else MultiOutputRegressor(training_model))])
         super().__init__(name, pipeline, features_data, target_data)
 
 class RFEFeatureSlectionPipelineRunner(TrainingRunner):
