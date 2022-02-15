@@ -86,6 +86,7 @@ class TrainingRunner(object):
         if is_final:
             os.makedirs(path_consts.FINAL_TRAINNED_MDOELS_PATH, exist_ok=True)
             with open(path_consts.FINAL_TRAINNED_MDOELS_PATH / model_file_name, "wb+") as final_model:
+                print(f'Dumping model to {path_consts.FINAL_TRAINNED_MDOELS_PATH / model_file_name}')
                 dump(trained_pipeline, final_model)
 
     def __str__(self):
