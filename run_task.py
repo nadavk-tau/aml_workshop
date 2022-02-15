@@ -85,12 +85,17 @@ def _transform_output_results(results, patient_names):
 
 
 def _run_model_tasks(parsed_args):
+    print(f"Running task {parsed_args.task_id}:")
+    print("> Loading model...")
     trained_model = _load_model(parsed_args.task_id)
+    print(f"> Loading input file '{parsed_args.input_file}'...")
     input_data = _transform_input_data(pd.read_csv(parsed_args.input_file, sep='\t'))
-
+    print("> Inferring...")
     predictions = trained_model.predict(input_data)
+    print(f"> Writing output to '{parsed_args.output_file}'...")
     transformed_output = _transform_output_results(predictions, input_data.index)
     transformed_output.to_csv(parsed_args.output_file, sep='\t')
+    print("Done.")
 
 
 def _run_task3(parsed_args):
