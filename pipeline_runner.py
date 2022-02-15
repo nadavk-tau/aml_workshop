@@ -43,10 +43,10 @@ def _parse_args():
     subparsers = parser.add_subparsers(dest='cmd')
     subparsers.required = True
     train_parser = subparsers.add_parser('train')
-    train_parser.add_argument('task', type=Tasks, help='The task to be trained')
+    train_parser.add_argument('task', type=Tasks, choices=list(Tasks), help='The task to be trained (1,2,3)')
     train_parser.set_defaults(func=train_models)
     dump_parser = subparsers.add_parser('dump')
-    dump_parser.add_argument('task', type=Tasks, help='Dump the best task')
+    dump_parser.add_argument('task', type=Tasks, choices=[Tasks.task1, Tasks.task2], help='Dump the best task (1,2) [task 3 won\'t be dumped]')
     dump_parser.set_defaults(func=dump_models)
     return parser.parse_args()
 
@@ -284,9 +284,6 @@ def dump_models(args):
             model_is_multitask=True
         )
         model.dump_train_model("task2", True)
-    elif args.task == Tasks.task3:
-        model = RawClassificationTrainingRunner("logistic regression c0.8", LogisticRegression(C=0.8), tcga_rnaseq, tcga_mutations),
-        model.dump_train_model("task3", True)
     else:
         raise RuntimeError("Invalid task")
 
