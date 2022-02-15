@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
 import pandas as pd
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, RepeatedKFold
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.classifier_results_utils import analyze_classifier_roc, analyze_classifier_pr
@@ -32,11 +32,12 @@ from sklearn.metrics import mean_squared_error
 
 def run_cv(runner):
     print(f">>> Running on \'{runner}\'")
-    results = runner.run_cross_validation(cv=KFold(n_splits=5, random_state=45, shuffle=True))
-    # results = runner.run_cross_validation(cv=5)
+    results = runner.run_cross_validation(cv=RepeatedKFold(n_splits=5, n_repeats=1000))
     print(f"{runner} results:")
-    print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
-    print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
+    # print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
+    # print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
+    print(f"- CV training results: \n\tmean={np.mean(results['train_score'])}")
+    print(f"- CV test results: \n\tmean={np.mean(results['test_score'])}")
 
 def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=False):
     print(f">>> Running on \'{runner}\':")
@@ -68,7 +69,7 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         # PCAPipelineRunner('PCAMultiTaskLasso', MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug),
         # RawPipelineRunner('Raw MultiTaskLasso', MultiTaskLasso(random_state=10, max_iter=10000, alpha=1.0), beat_rnaseq, beat_drug),
         # RawPipelineRunner('Raw MultiTaskLasso2', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.7), beat_rnaseq, beat_drug),
-        # RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug),
+        RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug),
         # PCAPipelineRunner('PCA MultiOutputRegressor Ridge', MultiOutputRegressor(Ridge(random_state=10, max_iter=10000, alpha=1)), beat_rnaseq, beat_drug),
         # # SpearmanCorrelationPipelineRunner(GradientBoostingRegressor(), beat_rnaseq, beat_drug),
         # ModelFeatureSlectionPipelineRunner('DecisionTree GradientBoostingRegressor', GradientBoostingRegressor(), DecisionTreeRegressor(), beat_rnaseq, beat_drug),
@@ -89,12 +90,10 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
         #                      ('training_model', RandomForestRegressor(random_state=10, max_depth=5, n_estimators=500))]) for i in range(3)], beat_rnaseq, beat_drug, 3, True),
         # -0.399366508767371
         
-        ModelFeatureSlectionPipelineRunner('Multi Lasso (feature selection) and Random Forest 1000', RandomForestRegressor(random_state=10, max_depth=7, n_estimators=1000), MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, model_is_multitask=True),
-
         # Current champ
         ModelFeatureSlectionPipelineRunner('Multi Lasso (feature selection) and Random Forest 4', RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500), MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug, model_is_multitask=True),
-        # SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 4', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), max_features=100)),
-        #                      ('training_model', RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500))]) for i in range(3)], beat_rnaseq, beat_drug, 3),
+        SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 4', [Pipeline([('feature_selection_k_best', SelectFromModel(estimator=MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), max_features=100)),
+                             ('training_model', RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500))]) for i in range(3)], beat_rnaseq, beat_drug, 3),
         
         # SpearmanCorrelationClustingPipelineRunner('Drug Cluster Multi Lasso (feature selection) and Random Forest 7 cluster',
         #  [Pipeline([("var_threshold", VarianceThreshold(0.5)),
