@@ -116,7 +116,7 @@ def task1(beat_rnaseq, beat_drug, subbmission2_folds):
     with ResultsLogger('task1') as results_logger:
         for model in task1_models:
             run_cv_and_save_estimated_results(model, subbmission2_folds, results_logger, output_graphs=True)
-            run_cv(model)
+            run_cv_repeated(model)
             print('-------------------')
     print('<<<<<<<< TASK1 END >>>>>>>>')
 
