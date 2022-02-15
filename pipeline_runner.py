@@ -1,14 +1,13 @@
 import numpy as np
 import seaborn as sns
 import pandas as pd
-from sklearn.model_selection import KFold, RepeatedKFold
+from sklearn.model_selection import RepeatedKFold
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.classifier_results_utils import analyze_classifier_roc, analyze_classifier_pr
-from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
-    PCAPipelineRunner, RawPipelineRunner, PartialPCAPipelineRunner, SemisupervisedPipelineRunner,
-    FRegressionFeatureSlectionPipelineRunner, MutualInfoRegressionFeatureSlectionPipelineRunner, RFEFeatureSlectionPipelineRunner,
-    FOneWayCorrelationMutationPipelineRunner, MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner,
+from utils.pipeline_utils.training_runner import (ModelFeatureSlectionPipelineRunner, PCAPipelineRunner, RawPipelineRunner,
+    PartialPCAPipelineRunner, SemisupervisedPipelineRunner, FOneWayCorrelationMutationPipelineRunner,
+    MannWhtUCorrelationMutationPipelineRunner, SpearmanCorrelationClustingPipelineRunner,
     BaysianFeatureSelectionMutationPipelineRunner, RawClassificationTrainingRunner, Chi2Selector)
 from utils.results_logger import ResultsLogger
 from utils.mutation_matrix_utils import calculate_mutation_drug_correlation_matrix
