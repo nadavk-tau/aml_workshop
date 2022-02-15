@@ -12,9 +12,10 @@ class Tasks(Enum):
     task2 = '2'
     task3 = '3'
 
+
 MODELS_NAME_BY_TASK= {
-    Tasks.task1: r'task1.model',
-    Tasks.task2: r'task2.model'
+    '1': r'task1.model',
+    '2': r'task2.model'
 }
 
 DRUGS_LIST = ['A-674563', 'Afatinib (BIBW-2992)', 'Alisertib (MLN8237)',
@@ -39,22 +40,34 @@ DRUGS_LIST = ['A-674563', 'Afatinib (BIBW-2992)', 'Alisertib (MLN8237)',
        'Trametinib (GSK1120212)', 'Vandetanib (ZD6474)', 'Vargetef',
        'Vatalanib (PTK787)', 'Vismodegib (GDC-0449)', 'VX-745', 'YM-155']
 
-def _parse_input():
-    parser = argparse.ArgumentParser(description='Run tasks prediction')
-    parser.add_argument('--task-id', '-tid', type=Tasks, help='The task id to run')
-    parser.add_argument('--input-file', '-i', type=str, nargs='?', help='Input file')
-    parser.add_argument('--output-file', '-o', type=str, help='Output file')
 
-    parsed_args = parser.parse_args()
-    if (parsed_args.task_id == Tasks.task3) and (parsed_args.input_file is not None):
-        raise "Task3 it running without input file"
+def _parse_args():
+    parser = argparse.ArgumentParser(description='Run tasks')
+    subparsers = parser.add_subparsers(dest='task_id')
+    subparsers.required = True
 
-    return parsed_args
+    task1_parser = subparsers.add_parser('1')
+    task1_parser.add_argument('input_file', type=str, help='Input file')
+    task1_parser.add_argument('output_file', type=str, help='Output file')
+    task1_parser.set_defaults(func=_run_model_tasks)
+
+    task2_parser = subparsers.add_parser('2')
+    task2_parser.add_argument('input_file', type=str, help='Input file')
+    task2_parser.add_argument('output_file', type=str, help='Output file')
+    task2_parser.set_defaults(func=_run_model_tasks)
+
+    task3_parser = subparsers.add_parser('3')
+    task3_parser.add_argument('output_file', type=str, help='Output file')
+    task3_parser.set_defaults(func=_run_task3)
+
+    return parser.parse_args()
+
 
 def _load_model(task):
     model_path = path_consts.FINAL_TRAINNED_MDOELS_PATH / MODELS_NAME_BY_TASK[task]
     with open(model_path, 'rb') as model_file:
         return load(model_file)
+
 
 def _transform_input_data(input_data):
     input_data = input_data.T
@@ -62,35 +75,31 @@ def _transform_input_data(input_data):
 
     return np.log2(input_data + 1)
 
-def _transfome_output_results(results, patient_names):
+
+def _transform_output_results(results, patient_names):
     results = pd.DataFrame(results)
     results.columns = DRUGS_LIST
     results.set_index(patient_names, inplace=True)
 
     return results.T
 
+
 def _run_model_tasks(parsed_args):
     trained_model = _load_model(parsed_args.task_id)
     input_data = _transform_input_data(pd.read_csv(parsed_args.input_file, sep='\t'))
 
     predictions = trained_model.predict(input_data)
-    nimrod_output = _transfome_output_results(predictions, input_data.index)
+    nimrod_output = _transform_output_results(predictions, input_data.index)
     nimrod_output.to_csv(parsed_args.output_file, sep='\t')
+
 
 def _run_task3(parsed_args):
     print("Task3")
 
-_RUNNING_TASKS = {
-    Tasks.task1: _run_model_tasks,
-    Tasks.task2: _run_model_tasks,
-    Tasks.task3: _run_task3,
-}
 
 def main():
-    parsed_args = _parse_input()
-    task = parsed_args.task_id
-
-    _RUNNING_TASKS[task](parsed_args)
+    parsed_args = _parse_args()
+    parsed_args.func(parsed_args)
 
 
 if __name__ == '__main__':
