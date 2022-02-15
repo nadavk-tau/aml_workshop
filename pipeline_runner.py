@@ -3,6 +3,8 @@ import seaborn as sns
 import pandas as pd
 import argparse
 
+from enum import Enum
+
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.classifier_results_utils import analyze_classifier_roc, analyze_classifier_pr
 from utils.pipeline_utils.training_runner import (SpearmanCorrelationPipelineRunner, ModelFeatureSlectionPipelineRunner,
@@ -38,14 +40,15 @@ class Tasks(Enum):
 
 def _parse_args():
     parser = argparse.ArgumentParser(description='Training pipeline runner')
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest='cmd')
+    subparsers.required = True
     train_parser = subparsers.add_parser('train')
     train_parser.add_argument('task', type=Tasks, help='The task to be trained')
     train_parser.set_defaults(func=train_models)
     dump_parser = subparsers.add_parser('dump')
     dump_parser.add_argument('task', type=Tasks, help='Dump the best task')
     dump_parser.set_defaults(func=dump_models)
-    return parsed_args
+    return parser.parse_args()
 
 
 def get_beat_rnaseq():
@@ -290,7 +293,7 @@ def dump_models(args):
 
 def main():
     parsed_args = _parse_args()
-    args.func(args)
+    parsed_args.func(parsed_args)
 
 
 if __name__ == '__main__':
