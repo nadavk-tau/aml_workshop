@@ -1,8 +1,8 @@
 import argparse
-import pickle
 import pandas as pd
 import numpy as np
 
+from joblib import load
 from config import path_consts
 from enum import Enum
 
@@ -51,10 +51,10 @@ def _parse_input():
 
     return parsed_args
 
-def _load_pickle_model(task):
+def _load_model(task):
     model_path = path_consts.FINAL_TRAINNED_MDOELS_PATH / MODELS_NAME_BY_TASK[task]
     with open(model_path, 'rb') as model_file:
-        return pickle.load(model_file)
+        return load(model_file)
 
 def _transform_input_data(input_data):
     input_data = input_data.T
@@ -70,10 +70,10 @@ def _transfome_output_results(results, patient_names):
     return results.T
 
 def _run_model_tasks(parsed_args):
-    trainniend_model = _load_pickle_model(parsed_args.task_id)
+    trained_model = _load_model(parsed_args.task_id)
     input_data = _transform_input_data(pd.read_csv(parsed_args.input_file, sep='\t'))
 
-    predictions = trainniend_model.predict(input_data)
+    predictions = trained_model.predict(input_data)
     nimrod_output = _transfome_output_results(predictions, input_data.index)
     nimrod_output.to_csv(parsed_args.output_file, sep='\t')
 

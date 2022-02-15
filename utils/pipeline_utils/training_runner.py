@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import seaborn as sns
-import pickle
 import os
 
 
@@ -10,7 +9,7 @@ import utils.spearman_correlation_matrix_utils as spearman_correlation_matrix_ut
 from datetime import datetime
 from config import path_consts
 from utils import mutation_matrix_utils
-from joblib import parallel_backend
+from joblib import parallel_backend, dump
 from sklearn.model_selection import cross_validate, train_test_split, GridSearchCV
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.feature_selection import SelectKBest, SelectFromModel, VarianceThreshold,  RFE, f_regression, mutual_info_regression
@@ -82,12 +81,12 @@ class TrainingRunner(object):
         temp_output_file_path = output_file_path / model_file_name
 
         with open(temp_output_file_path, 'wb+') as output_file:
-            pickle.dump(trained_pipeline, output_file)
+            dump(trained_pipeline, output_file)
 
         if is_final:
             os.makedirs(path_consts.FINAL_TRAINNED_MDOELS_PATH, exist_ok=True)
             with open(path_consts.FINAL_TRAINNED_MDOELS_PATH / model_file_name, "wb+") as final_model:
-                pickle.dump(trained_pipeline, final_model)
+                dump(trained_pipeline, final_model)
 
     def __str__(self):
         return self._name
