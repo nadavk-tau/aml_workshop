@@ -30,14 +30,12 @@ from sklearn.multioutput import MultiOutputRegressor, RegressorChain
 from sklearn.metrics import mean_squared_error
 
 
-def run_cv(runner):
+def run_cv_repeated(runner, n_repeats=100):
     print(f">>> Running on \'{runner}\'")
-    results = runner.run_cross_validation(cv=RepeatedKFold(n_splits=5, n_repeats=1000))
+    results = runner.run_cross_validation(cv=RepeatedKFold(n_splits=5, n_repeats=n_repeats))
     print(f"{runner} results:")
-    # print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
-    # print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
-    print(f"- CV training results: \n\tmean={np.mean(results['train_score'])}")
-    print(f"- CV test results: \n\tmean={np.mean(results['test_score'])}")
+    print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
+    print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
 
 def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=False):
     print(f">>> Running on \'{runner}\':")
