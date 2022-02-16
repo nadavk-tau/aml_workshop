@@ -4,6 +4,7 @@ import pandas as pd
 import argparse
 
 from enum import Enum
+from sklearn.model_selection import RepeatedKFold
 
 from utils.data_parser import ResourcesPath, DataTransformation, SubmissionFolds
 from utils.classifier_results_utils import analyze_classifier_roc, analyze_classifier_pr
@@ -78,6 +79,14 @@ def get_subbmission2_folds():
 def run_cv(runner):
     print(f">>> Running on \'{runner}\'")
     results = runner.run_cross_validation(cv=5)
+    print(f"{runner} results:")
+    print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
+    print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
+
+
+def run_cv_repeated(runner, n_repeats=100):
+    print(f">>> Running on \'{runner}\'")
+    results = runner.run_cross_validation(cv=RepeatedKFold(n_splits=5, n_repeats=n_repeats))
     print(f"{runner} results:")
     print(f"- CV training results: \n\t{results['train_score']}, mean={np.mean(results['train_score'])}")
     print(f"- CV test results: \n\t{results['test_score']}, mean={np.mean(results['test_score'])}")
