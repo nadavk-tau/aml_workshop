@@ -17,4 +17,5 @@ Environment setup (internal use)
    1. Download https://repo.anaconda.com/miniconda/Miniconda3-py37_4.11.0-Linux-x86_64.sh
    2. Run `chmod +x Miniconda3-py37_4.11.0-Linux-x86_64.sh`
    3. Run `./Miniconda3-py37_4.11.0-Linux-x86_64.sh` and follow instructions
+   4. Run `miniconda3/bin/conda init tcsh`
 2. Create miniconda environment: `miniconda3/bin/conda create --name submission_env --file aml_workshop/requirements.txt`
