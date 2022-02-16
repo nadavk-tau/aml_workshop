@@ -113,7 +113,7 @@ def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
-    task1_models = [
+        task1_models = [
         PCAPipelineRunner('PCAHuberRegressor', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=30),
         PCAPipelineRunner('PCAHuberRegressor2', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=6),
         PCAPipelineRunner('PCAHuberRegressor3', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=50),
@@ -255,7 +255,14 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
             analyze_classifier_roc(model, results_logger.get_path_in_dir(f"{str(model)}_MUTATION_NAME_roc_analysis.png"))
             analyze_classifier_pr(model, results_logger.get_path_in_dir(f"{str(model)}_MUTATION_NAME_pr_analysis.png"))
 
-        task1_selected_model = RawPipelineRunner('Raw MultiTaskLasso3', MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8), beat_rnaseq, beat_drug)
+        task1_selected_model = ModelFeatureSlectionPipelineRunner(
+            'Multi Lasso (feature selection) and Random Forest 4',
+            RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500),
+            MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8),
+            get_beat_rnaseq(),
+            get_beat_drug(),
+            model_is_multitask=True
+        )
         _output_task1_to_task3_results(task1_selected_model, tcga_rnaseq, results_logger)
     print('<<<<<<<< TASK3 END >>>>>>>>')
 
