@@ -3,9 +3,7 @@ How to run?
 
 1. Goto the submission directory: `cd /users/scratch/medical_genomics-2022-04/nadavkraoz`
    
-   **First time:** Run `miniconda3/bin/conda init tcsh` and then restart the shell.
-     
-   Start again from step 1, without doing this step.
+   **First time:** Run `miniconda3/bin/conda init tcsh` and then restart the shell. Start again from step 1, without doing this step.
      
    (This adds miniconda to the `$PATH` env var via `~/.tcshrc`)
 
