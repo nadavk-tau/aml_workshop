@@ -7,7 +7,7 @@ How to run?
      
    Start again from step 1, without doing this step.
      
-   This adds miniconda to the `$PATH` env var via `~/.tcshrc`
+   (This adds miniconda to the `$PATH` env var via `~/.tcshrc`)
 
 2. Activate miniconda environment: `conda activate submission_env`
 
