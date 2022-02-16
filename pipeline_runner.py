@@ -259,8 +259,8 @@ def task3(beat_rnaseq, tcga_rnaseq, beat_drug, beat_drug_without_missing_IC50, t
             'Multi Lasso (feature selection) and Random Forest 4',
             RandomForestRegressor(random_state=10, max_depth=7, n_estimators=500),
             MultiTaskLasso(random_state=10, max_iter=10000, alpha=0.8),
-            get_beat_rnaseq(),
-            get_beat_drug(),
+            beat_rnaseq,
+            beat_drug,
             model_is_multitask=True
         )
         _output_task1_to_task3_results(task1_selected_model, tcga_rnaseq, results_logger)
