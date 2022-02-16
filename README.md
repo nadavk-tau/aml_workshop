@@ -14,7 +14,7 @@ How to run?
 Environment setup (internal use)
 ================================
 1. Install miniconda:
-   a. Download https://repo.anaconda.com/miniconda/Miniconda3-py37_4.11.0-Linux-x86_64.sh
-   b. Run `chmod +x Miniconda3-py37_4.11.0-Linux-x86_64.sh`
-   c. Run `./Miniconda3-py37_4.11.0-Linux-x86_64.sh` and follow instructions
+   1. Download https://repo.anaconda.com/miniconda/Miniconda3-py37_4.11.0-Linux-x86_64.sh
+   2. Run `chmod +x Miniconda3-py37_4.11.0-Linux-x86_64.sh`
+   3. Run `./Miniconda3-py37_4.11.0-Linux-x86_64.sh` and follow instructions
 2. Create miniconda environment: `miniconda3/bin/conda create --name submission_env --file aml_workshop/requirements.txt`
