@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 
+from shutil import copyfile
 from joblib import load
 from config import path_consts
 from enum import Enum
@@ -101,7 +102,10 @@ def _run_model_tasks(parsed_args):
 
 
 def _run_task3(parsed_args):
-    print("Task3")
+    print(f"Running task {parsed_args.task_id}:")
+    print(f"> Writing correlation matirx to '{parsed_args.output_file}'...")
+    copyfile(path_consts.FINAL_TRAINNED_MDOELS_PATH / 'task3_corr.tsv', parsed_args.output_file)
+    print("Done.")
 
 
 def main():
