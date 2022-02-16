@@ -3,9 +3,9 @@ How to run?
 
 1. Goto the submission directory: `cd /users/scratch/medical_genomics-2022-04/nadavkraoz`
    
-   **First time:** Run `miniconda3/bin/conda init tcsh` and then restart the shell. Start again from step 1, without doing this step.
+   **First time:** Run `miniconda3/bin/conda init` and then restart the shell. Start again from step 1, without doing this step.
      
-   (This adds miniconda to the `$PATH` env var via `~/.tcshrc`)
+   (This adds miniconda to the `$PATH` env var via `~/.tcshrc`/`~/.bashrc`/etc.)
 
 2. Activate miniconda environment: `conda activate submission_env`
 
@@ -30,6 +30,6 @@ Environment setup (internal use)
 
    3. Run `./Miniconda3-py37_4.11.0-Linux-x86_64.sh` and follow instructions
 
-   4. Run `miniconda3/bin/conda init tcsh`
+   4. Run `miniconda3/bin/conda init`
 
 2. Create miniconda environment: `miniconda3/bin/conda create --name submission_env --file aml_workshop/requirements.txt`
