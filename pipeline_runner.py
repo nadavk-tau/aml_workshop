@@ -113,7 +113,7 @@ def run_cv_and_save_estimated_results(runner, cv, results_logger, output_graphs=
 
 
 def task1(beat_rnaseq, beat_drug, subbmission2_folds):
-        task1_models = [
+    task1_models = [
         PCAPipelineRunner('PCAHuberRegressor', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=30),
         PCAPipelineRunner('PCAHuberRegressor2', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=6),
         PCAPipelineRunner('PCAHuberRegressor3', MultiOutputRegressor(HuberRegressor(max_iter=10000, alpha=0.3)), beat_rnaseq, beat_drug, n_components=50),
